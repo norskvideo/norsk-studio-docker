@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -eo pipefail
+# This script installs the Norsk Studio on your system by
+# downloading a binary distribution and running its installer script
+# (which in turn pulls various Docker containers).  It is based on
+# the nix install script (https://nixos.org/nix/install)
+
+{ # Prevent execution if this script was only partially downloaded
+    umask 0022
+
+    # Various helper functions
+    oops() {
+        echo "$0:" "$@" >&2
+        exit 1
+    }
+
+    require_util() {
+        command -v "$1" > /dev/null 2>&1 ||
+        oops "you do not have '$1' installed, which I need to $2"
+    }
+
+    find_license() {
+        echo
+        echo "Norsk Studio needs a license file to operate."
+        echo "You can get a FREE trial licence from"
+        echo "https://norsk.video"
+        echo
+
+        while [[ ! -f "$abs_lp" ]]; do
+            echo "Empty response to abandon install"
+            echo "TAB completion available"
+            read -r -e -p "Enter the path to your Norsk license file: " license_path
+            if [[ $license_path == "" ]]; then
+                oops "no license file provided"
+            fi
+            abs_lp=$(realpath "$license_path")
+
+            if [[ ! -f "$abs_lp" ]]; then
+                echo "The specified license file not found. Please try again."
+            else
+                cp "$abs_lp" "$tmpLicense"
+            fi
+        done
+    }
+
+    targetDirname="norsk-studio"
+    releaseVersion="v1.0.6"
+    releaseURL="https://github.com/norskvideo/norsk-studio-starter-kit/archive/refs/tags/$releaseVersion.tar.gz"
+    releaseHash="2f2b67163a42c007bd32d3b856cc4e08a5b3ec413d6d3843378ec1499b85688c"
+    tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
+        oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
+    tmpLicense=$tmpDir/license.json
+    tarball=$tmpDir/norsk-studio-$releaseVersion.tar.gz
+    cleanup() {
+        # shellcheck disable=SC2317
+        rm -rf "$tmpDir"
+        echo
+    }
+    trap cleanup EXIT INT QUIT TERM
+
+    # Check prerequisites
+    require_util tar "unpack the binary tarball"
+
+    if command -v curl > /dev/null 2>&1; then
+        fetch() { curl --fail -L "$1" -o "$2"; }
+        elif command -v wget > /dev/null 2>&1; then
+        fetch() { wget "$1" -O "$2"; }
+    else
+        oops "you don't have wget or curl installed, which I need to download the binary tarball"
+    fi
+
+    # We need a hash calculator
+    if command -v sha256sum > /dev/null 2>&1; then
+        hashCmd="sha256sum -b"
+        elif command -v shasum > /dev/null 2>&1; then
+        hashCmd="shasum -a 256 -b"
+        elif command -v openssl > /dev/null 2>&1; then
+        hashCmd="openssl dgst -r -sha256"
+    else
+        oops "cannot verify the SHA-256 hash of '$releaseURL'; you need one of 'shasum', 'sha256sum', or 'openssl'"
+    fi
+
+    # Check that docker compose is available and running
+    require_util "docker" "run the Norsk containers"
+    # We have docker, but do we have docker compose v2
+    composeVersion=$(docker compose version 2> /dev/null |  grep -i "Docker Compose version ")
+    if [ $? -ne 0 ]; then
+        oops "you do not have docker compose v2 installed, which I need to run the Norsk containers"
+    fi
+    # We have docker compose - check that docker is running
+    if ! docker images > /dev/null 2>&1; then
+        oops "docker compose seems to be installed, but I don't think it's running"
+    fi
+
+    # Make sure we are not about to overwrite an exsiting installation
+    if [ -d $targetDirname ] ; then
+        oops "there already is a directory called $targetDirname"
+    fi
+    if [ -f $targetDirname ] ; then
+        oops "there already is a file called $targetDirname"
+    fi
+
+    # Prompt the user for the location of their license file
+    find_license
+    cat $tmpDir/license $license_path
+
+    echo "Found docker compose $composeVersion and other required utilities, proceeding"
+    echo
+
+    echo "Downloading Norsk Sudio (Docker version)  binary tarball from '$releaseURL' to '$tmpDir'..."
+    fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
+
+    calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
+
+    if [ "$calculatedHash" != "$releaseHash" ]; then
+        oops "SHA-256 hash mismatch in '$releaseURL'; expected $releaseHash, got $calculatedHash"
+    fi
+
+    unpack=$tmpDir/unpack
+    mkdir -p "$unpack"
+    tar -xf "$tarball" -C "$unpack" || oops "failed to unpack '$releaseURL'"
+
+    mkdir -p ./$targetDirname
+    mv "$unpack"/norsk-studio*/* ./$targetDirname
+
+    exit 0
+
+    script=$(echo "$unpack"/*/install)
+
+    [ -e "$script" ] || oops "installation script is missing from the binary tarball!"
+    export INVOKED_FROM_INSTALL_IN=1
+    "$script" "$@"
+
+} # End of wrapping
