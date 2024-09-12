@@ -1,0 +1,356 @@
+__layout:
+  - id: camera1_preview
+    x: 560
+    y: -272
+  - id: abr_ladder
+    x: 1520
+    y: 128
+  - id: camera2_preview
+    x: 1056
+    y: -272
+  - id: hls_and_dash
+    x: 1808
+    y: 352
+  - id: live_camera
+    x: 1024
+    y: 576
+  - id: browser_overlay
+    x: 1184
+    y: 128
+  - id: source_switcher
+    x: 576
+    y: 352
+  - id: on_screen_graphic
+    x: 880
+    y: 128
+  - id: srt_sources
+    x: 176
+    y: 352
+__globalConfig: {}
+components:
+  - type: output.preview
+    config:
+      displayName: Camera1 Preview
+      bufferDelayMs: 500
+      id: camera1_preview
+    subscriptions:
+      - source: srt_sources
+        streams:
+          type: take-specific-stream
+          select:
+            - video
+            - audio
+          filter: camera1
+  - type: processor.fixedLadder
+    config:
+      displayName: ABR Ladder
+      rungs:
+        - name: h264_1280x720
+          software:
+            width: 1280
+            height: 720
+            codec:
+              type: x264
+              bitrateMode:
+                value: 2500
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 4
+              bframes: 0
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 1280
+            height: 720
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 2500000
+            frameRate:
+              frames: 25
+              seconds: 1
+          logan:
+            width: 1280
+            height: 720
+            codec:
+              type: logan-h264
+              intraPeriod: 50
+              bitrate: 2500000
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 1280
+            height: 720
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 2500000
+            frameRate:
+              frames: 25
+              seconds: 1
+          ma35d:
+            width: 1280
+            height: 720
+            codec:
+              type: amdMA35D-h264
+              profile: main
+              rateControl:
+                mode: cbr
+                bitrate: 5000
+              gopSize: 50
+            frameRate:
+              frames: 25
+              seconds: 1
+        - name: h264_640x360
+          software:
+            width: 640
+            height: 360
+            codec:
+              type: x264
+              bitrateMode:
+                value: 1000
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 640
+            height: 360
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 1000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          logan:
+            width: 640
+            height: 360
+            codec:
+              type: logan-h264
+              intraPeriod: 50
+              bitrate: 1000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 640
+            height: 360
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 1000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          ma35d:
+            width: 640
+            height: 360
+            codec:
+              type: amdMA35D-h264
+              profile: main
+              rateControl:
+                mode: cbr
+                bitrate: 2000
+              gopSize: 50
+            frameRate:
+              frames: 25
+              seconds: 1
+        - name: h264_320x180
+          software:
+            width: 320
+            height: 180
+            codec:
+              type: x264
+              bitrateMode:
+                value: 800
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 1
+              bframes: 0
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 320
+            height: 180
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 800000
+            frameRate:
+              frames: 25
+              seconds: 1
+          logan:
+            width: 320
+            height: 180
+            codec:
+              type: logan-h264
+              intraPeriod: 50
+              bitrate: 800000
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 320
+            height: 180
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 800000
+            frameRate:
+              frames: 25
+              seconds: 1
+          ma35d:
+            width: 320
+            height: 180
+            codec:
+              type: amdMA35D-h264
+              profile: main
+              rateControl:
+                mode: cbr
+                bitrate: 1000
+              gopSize: 50
+            frameRate:
+              frames: 25
+              seconds: 1
+      id: abr_ladder
+    subscriptions:
+      - source: browser_overlay
+        streams:
+          type: take-first-stream
+          select:
+            - video
+  - type: output.preview
+    config:
+      displayName: Camera2 Preview
+      bufferDelayMs: 500
+      id: camera2_preview
+    subscriptions:
+      - source: srt_sources
+        streams:
+          type: take-specific-stream
+          select:
+            - audio
+            - video
+          filter: camera2
+  - type: output.autoCmaf
+    config:
+      displayName: HLS and DASH
+      name: default
+      sessionId: false
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+      s3Destinations: []
+      id: hls_and_dash
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-specific-streams
+          select:
+            - video
+          filter:
+            - h264_1280x720
+            - h264_640x360
+            - h264_320x180
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          select:
+            - audio
+  - type: output.preview
+    config:
+      displayName: Live Camera
+      bufferDelayMs: 500
+      id: live_camera
+    subscriptions:
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          select:
+            - video
+            - audio
+  - type: processor.browserOverlay
+    config:
+      displayName: Browser Overlay
+      url: https://app.singular.live/output/6CTPhPRe7yc5lkxgUixA5q/Default?aspect=9:5
+      id: browser_overlay
+    subscriptions:
+      - source: on_screen_graphic
+        streams:
+          type: take-first-stream
+          select:
+            - video
+  - type: processor.sourceSwitcher
+    config:
+      displayName: Source Switcher
+      resolution:
+        width: 1280
+        height: 720
+      frameRate:
+        frames: 25
+        seconds: 1
+      sampleRate: 48000
+      channelLayout: stereo
+      id: source_switcher
+    subscriptions:
+      - source: srt_sources
+        streams:
+          type: take-specific-streams
+          select:
+            - video
+            - audio
+          filter:
+            - camera1
+            - camera2
+  - type: processor.onscreenGraphic
+    config:
+      displayName: On Screen Graphic
+      initialGraphic: Norsk.png
+      initialPosition: topleft
+      id: on_screen_graphic
+    subscriptions:
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          select:
+            - video
+  - type: input.srt-listener
+    config:
+      displayName: SRT Sources
+      port: 5001
+      ip: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: strict
+      streamIds:
+        - camera1
+        - camera2
+      id: srt_sources
+    subscriptions: []

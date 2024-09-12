@@ -1,0 +1,27 @@
+###############################################################
+# Environment variables used components running in your workflows.
+###############################################################
+
+###############################################################
+# Top level
+###############################################################
+# Environment variables that impact ALL instances of a component.
+# in a workflow
+
+# If not specified, this will be 'bugs', relative to the
+# norsk working directory
+# DYNAMICBUG_DIRECTORY=bugs
+
+###############################################################
+# Component instance level
+###############################################################
+# Environment variables that impact ONE instance of a component
+# in a workflow.
+# In general, these overrides have the form
+# ${COMPONENT_ID}_${OVERRIDE_NAME}=VALUE
+# (any - characters are replaced with _ and the env var name is always
+# UPPERCASE)
+
+# For example, to change the port that an SRT listener with id
+# srt-input is listening on
+# SRT_INPUT_PORT=5000

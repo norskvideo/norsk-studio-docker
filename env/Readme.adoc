@@ -1,0 +1,7 @@
+= Environments
+
+This folder contains environment variable overrides that influence
+Norsk Studio and Norsk Media's runtime behaviour.
+
+Note, any changes or additions to these files are are automatically reflected in
+the Docker runtime (via the env_file entries in the Docker Compose files).

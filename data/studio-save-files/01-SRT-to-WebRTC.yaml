@@ -1,0 +1,33 @@
+__layout:
+  - id: srt_source
+    x: 592
+    y: 544
+  - id: webrtc_output
+    x: 1232
+    y: 544
+components:
+  - type: input.srt-listener
+    config:
+      displayName: SRT Source
+      port: 5001
+      ip: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: permissive
+      streamIds:
+        - camera1
+      id: srt_source
+    subscriptions: []
+  - type: output.whep
+    config:
+      displayName: WebRTC Output
+      bufferDelayMs: 500
+      id: webrtc_output
+    subscriptions:
+      - source: srt_source
+        streams:
+          type: take-specific-stream
+          select:
+            - video
+            - audio
+          filter: camera1

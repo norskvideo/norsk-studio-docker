@@ -19,6 +19,11 @@ set -eo pipefail
         oops "you do not have '$1' installed, which I need to $2"
     }
 
+    realpath() {
+        local expanded="${1/#\~/$HOME}"
+        echo "$(cd "$(dirname "$expanded")" && pwd)/$(basename "$expanded")"
+    }
+
     find_license() {
         echo
         echo "Norsk Studio needs a license file to operate."
@@ -33,7 +38,7 @@ set -eo pipefail
             if [[ $license_path == "" ]]; then
                 oops "no license file provided"
             fi
-            abs_lp=$(realpath "$license_path")
+            abs_lp=$(realpath $license_path)
 
             if [[ ! -f "$abs_lp" ]]; then
                 echo "The specified license file not found. Please try again."
@@ -51,6 +56,7 @@ set -eo pipefail
         oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
     tmpLicense=$tmpDir/license.json
     tarball=$tmpDir/norsk-studio-$releaseVersion.tar.gz
+
     cleanup() {
         # shellcheck disable=SC2317
         rm -rf "$tmpDir"
@@ -62,9 +68,9 @@ set -eo pipefail
     require_util tar "unpack the binary tarball"
 
     if command -v curl > /dev/null 2>&1; then
-        fetch() { curl --fail -L "$1" -o "$2"; }
+        fetch() { curl  --silent --fail -L "$1" -o "$2"; }
         elif command -v wget > /dev/null 2>&1; then
-        fetch() { wget "$1" -O "$2"; }
+        fetch() { wget --quiet "$1" -O "$2"; }
     else
         oops "you don't have wget or curl installed, which I need to download the binary tarball"
     fi
@@ -102,12 +108,11 @@ set -eo pipefail
 
     # Prompt the user for the location of their license file
     find_license
-    cat $tmpDir/license $license_path
 
     echo "Found docker compose $composeVersion and other required utilities, proceeding"
     echo
 
-    echo "Downloading Norsk Sudio (Docker version)  binary tarball from '$releaseURL' to '$tmpDir'..."
+    echo "Downloading Norsk Sudio from '$releaseURL'"
     fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
 
     calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
@@ -122,6 +127,23 @@ set -eo pipefail
 
     mkdir -p ./$targetDirname
     mv "$unpack"/norsk-studio*/* ./$targetDirname
+
+    # Move the license file into place
+    mkdir -p ./$targetDirname/secrets
+
+    mv $tmpLicense ./$targetDirname/secrets
+
+
+    # Pull down the docker containers
+    docker pull --quiet norskvideo/norsk:v1.0.380-main
+    # docker pull --quiet norskvideo/norsk-studio:1.0.380
+
+    # Pull down the sample media files
+    sourcesDir=$targetDirname/sources
+    mkdir -p $sourcesDir
+    for source in InkDrop.ts Weaving.ts ; do
+        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
+    done
 
     exit 0
 
