@@ -49,10 +49,10 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="1.0.381"
+    releaseVersion="v1.0.382"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
 
-    releaseHash="ddabe3456f2277d551a362a163cc84043dbc4e3e324628d4b22e3c5d00ae0db2"
+    releaseHash="e0004b779cc35a3fec28a42963f017d87565572ffda8d465ff9782446e705a05"
     tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
         oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
     tmpLicense=$tmpDir/license.json
