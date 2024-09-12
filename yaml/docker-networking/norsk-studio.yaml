@@ -1,0 +1,13 @@
+networks:
+  norskNetwork:
+    name: norsk-nw
+
+services:
+  norsk-studio:
+    networks:
+      - norskNetwork
+    ports:
+      - 8000:8000
+    environment:
+      # In Docker networking the name of the norsk server is norsk - not 127.0.0.1
+      STUDIO_NORSK_HOST: norsk-media

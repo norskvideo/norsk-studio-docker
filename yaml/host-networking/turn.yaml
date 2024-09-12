@@ -1,0 +1,3 @@
+services:
+  norsk-turn:
+    network_mode: host

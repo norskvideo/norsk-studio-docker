@@ -1,0 +1,59 @@
+services:
+  #################################################################
+  # Norsk Media Server
+  #################################################################
+  norsk-media:
+    container_name: norsk-media
+    image: $NORSK_MEDIA_IMAGE
+    command: --license-file /run/secrets/license.json
+    # CEF (needs a large amount of shared memory)
+    shm_size: '2gb'
+    # privileged: true
+    restart: always
+    volumes:
+      - ../../data:/data
+      - ../../secrets:/data/secrets:ro
+      - /dev/shm:/dev/shm/
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "http://127.0.0.1:6791"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+    secrets:
+      - license.json
+
+    ###############################################################
+    # Provide access to any devices Norsk Media might need to access
+    ###############################################################
+    # devices:
+    #   - /dev/nvme0n1 # NETINT Quadra
+    #   - /dev/nvme1n1 # More Quadra
+    #   - /dev/ama_transcoder1 # AMD MA35D
+    #   - /dev/flex-x4100 # Deltacast SDI
+    #       For Deltacast upi might well want ipc: host if
+    #       multiple Norsk instance access the same card
+    ###############################################################
+    # Same for NVIDIA
+    # runtime: nvidia
+    ###############################################################
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=all
+
+    ###############################################################
+    # The below are nothing to do with Norsk itself, but
+    # are fields we often set in production settings...
+    ###############################################################
+
+    # Manage ownership of mounted volumes
+    # user: ${USER_ID}:${GROUP_ID}
+
+    # Manage which cores this container runs on
+    # Useful for segregating Norsk instances on large servers...
+    # cpuset: 0-31
+
+secrets:
+  license.json:
+    file: ../../secrets/license.json

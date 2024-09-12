@@ -1,0 +1,7 @@
+services:
+  norsk-turn:
+    container_name: norsk-turn
+    image: coturn/coturn
+    # user: "${DOCKER_UID}:${DOCKER_GID}"
+    volumes:
+      - ../../../turn/turnserver.conf:/etc/coturn/turnserver.conf:ro

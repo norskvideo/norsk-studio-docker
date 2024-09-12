@@ -1,0 +1,23 @@
+networks:
+  norskNetwork:
+    name: norsk-nw
+
+services:
+  norsk-media:
+    networks:
+      - norskNetwork
+    ports:
+      # "rtmp"
+      - 1935:1935/TCP
+      # "srt-1"
+      - 5001:5001/UDP
+      # "srt-2"
+      - 5002:5002/UDP
+
+      # "norsk-media-grpc"
+      - 6790:6790/TCP
+
+      # "norsk-media-ui"
+      - 6791:6791/TCP
+      # "media-serving"
+      - 8080:8080/TCP

@@ -1,0 +1,10 @@
+services:
+  norsk-turn:
+    ports:
+      - 3478:3478/udp # STUN/TURN
+      - 3478:3478/tcp # TURN tcp transport
+      - 5349:5349/tcp # tls
+      - 5349:5349/udp # tls
+      - 59160-59200:59160-59200/udp  # UDP relay
+    networks:
+      - norskNetwork

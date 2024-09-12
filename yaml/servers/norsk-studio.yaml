@@ -1,0 +1,33 @@
+services:
+  #################################################################
+  # Norsk Studio
+  #################################################################
+  norsk-studio:
+    container_name: norsk-studio
+    image: ${NORSK_STUDIO_IMAGE}
+    # restart: always
+    depends_on:
+      norsk-media:
+        condition: service_healthy
+    volumes:
+      - ../../data:/data
+    command: npx studio-editor
+    env_file:
+      - ../../env/studio-env # Environment variables used by Norsk Studio
+      - ../../env/components-env # Environment variables used by Norsk Studio's components
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "http://127.0.0.1:8000"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+
+    ###############################################################
+    # The below are nothing to do with Norsk Studio itself, but
+    # are fields we often set in production settings...
+    ###############################################################
+    # # Manage ownership of mounted volumes
+    # user: ${USER_ID}:${GROUP_ID}
+    # # Useful for segregating Norsk instances on large servers...
+    # cpuset: 0-1
