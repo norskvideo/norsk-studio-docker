@@ -136,7 +136,7 @@ set -eo pipefail
 
     # Pull down the docker containers
     docker pull --quiet norskvideo/norsk:v1.0.380-main
-    # docker pull --quiet norskvideo/norsk-studio:1.0.380
+    docker pull --quiet norskvideo/norsk-studio:1.0.381
 
     # Pull down the sample media files
     sourcesDir=$targetDirname/sources
