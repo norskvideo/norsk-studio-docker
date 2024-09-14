@@ -27,7 +27,7 @@ set -eo pipefail
     find_license() {
         echo
         echo "Norsk Studio needs a license file to operate."
-        echo "You can get a FREE trial licence from"
+        echo "You can get a FREE trial license from"
         echo "https://norsk.video"
         echo
 
@@ -150,8 +150,8 @@ set -eo pipefail
 
     # Pull down the docker containers
     echo "Downloading containers"
-    docker pull --quiet norskvideo/norsk:v1.0.380-main
-    docker pull --quiet norskvideo/norsk-studio:1.0.381
+    docker pull norskvideo/norsk:v1.0.380-main
+    docker pull norskvideo/norsk-studio:1.0.381
 
     # Pull down the sample media files
     echo "Downloading media samples"
