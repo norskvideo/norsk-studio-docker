@@ -49,7 +49,7 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="v1.0.381"
+    releaseVersion="v1.0.382"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
 
     releaseHash="e0004b779cc35a3fec28a42963f017d87565572ffda8d465ff9782446e705a05"
@@ -64,6 +64,7 @@ set -eo pipefail
         echo
     }
 
+    echo
     echo "Welcome to the Norsk Studio installer.  This script will download"
     echo "and install the Norsk Engine and Norsk Studio containers into your"
     echo "local docker.  It will also create a directory at the current location"
