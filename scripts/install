@@ -49,7 +49,7 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="v1.0.382"
+    releaseVersion="v1.0.381"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
 
     releaseHash="e0004b779cc35a3fec28a42963f017d87565572ffda8d465ff9782446e705a05"
@@ -63,9 +63,24 @@ set -eo pipefail
         rm -rf "$tmpDir"
         echo
     }
+
+    echo "Welcome to the Norsk Studio installer.  This script will download"
+    echo "and install the Norsk Engine and Norsk Studio containers into your"
+    echo "local docker.  It will also create a directory at the current location"
+    echo "called norsk-studio containing a couple of helper scripts and some"
+    echo "sample content. In total, this requires 7GB of disk space. After"
+    echo "installation, you can completely remove Norsk Studio by simply"
+    echo "deleting the norsk-studio directory and removing the two docker"
+    echo "containers."
+    echo
+    echo "If you wish to proceed then press 'enter', otherwise"
+    echo "press ctrl-c to abort the script."
+    read -r
+
     trap cleanup EXIT INT QUIT TERM
 
     # Check prerequisites
+    echo "Checking prerequisites"
     require_util tar "unpack the binary tarball"
 
     if command -v curl > /dev/null 2>&1; then
@@ -135,22 +150,23 @@ set -eo pipefail
     mv $tmpLicense ./$targetDirname/secrets
 
     # Pull down the docker containers
+    echo "Downloading containers"
     docker pull --quiet norskvideo/norsk:v1.0.380-main
     docker pull --quiet norskvideo/norsk-studio:1.0.381
 
     # Pull down the sample media files
+    echo "Downloading media samples"
     sourcesDir=$targetDirname/sources
     mkdir -p $sourcesDir
     for source in InkDrop.ts Weaving.ts ; do
         fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
     done
 
-    exit 0
+    rm -rf norsk-studio/scripts
 
-    script=$(echo "$unpack"/*/install)
-
-    [ -e "$script" ] || oops "installation script is missing from the binary tarball!"
-    export INVOKED_FROM_INSTALL_IN=1
-    "$script" "$@"
+    echo "Installation complete. To start Norsk Studio, run 'up.sh'.  To stop it, just"
+    echo "run 'down.sh'.  If you want to send in a sample SRT source to the example"
+    echo "workflows, then you can use 'sample-srt-source.sh'.  Enjoy using Norsk Studio!"
+    echo
 
 } # End of wrapping
