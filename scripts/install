@@ -32,9 +32,7 @@ set -eo pipefail
         echo
 
         while [[ ! -f "$abs_lp" ]]; do
-            echo "Empty response to abandon install"
-            echo "TAB completion available"
-            read -r -e -p "Enter the path to your Norsk license file: " license_path
+            read -r -e -p "Enter the path to your Norsk license file (TAB completion is available): " license_path
             if [[ $license_path == "" ]]; then
                 oops "no license file provided"
             fi
