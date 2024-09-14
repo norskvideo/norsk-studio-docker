@@ -10,4 +10,4 @@ services:
     volumes:
       - ../../../sources:/sources:ro
     entrypoint: ""
-    command: sh -c "sleep 2 && ffmpeg -loglevel error -progress /dev/null -re -stream_loop -1 -i /sources/${source} -vcodec copy -acodec copy -f mpegts -flush_packets 0 'srt://127.0.0.1:5001?streamid='${name}'&pkt_size=1316' 2>&1 | grep -v ffmpeg.progress"
+    command: sh -c "ffmpeg -loglevel error -progress /dev/null -re -stream_loop -1 -i /sources/${source} -vcodec copy -acodec copy -f mpegts -flush_packets 0 'srt://127.0.0.1:5001?streamid='${name}'&pkt_size=1316&connect_timeout=60000' 2>&1 | grep -v ffmpeg.progress"
