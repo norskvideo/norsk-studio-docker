@@ -2,7 +2,7 @@
 set -eo pipefail
 cd "${0%/*}"
 
-SOURCES_DIR=$(readlink -f ../sources)
+SOURCES_DIR=$(readlink -f ./sources)
 
 
 usage() {
