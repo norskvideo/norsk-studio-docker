@@ -127,7 +127,7 @@ set -eo pipefail
     echo "Found docker compose $composeVersion and other required utilities, proceeding"
     echo
 
-    echo "Downloading Norsk Sudio from '$releaseURL'"
+    echo "Downloading Norsk Studio from '$releaseURL'"
     fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
 
     calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
