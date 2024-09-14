@@ -96,7 +96,7 @@ set -eo pipefail
     fi
     # We have docker compose - check that docker is running
     if ! docker images > /dev/null 2>&1; then
-        oops "docker compose seems to be installed, but I don't think it's running"
+        oops "docker seems to be installed, but I can't run it - is the daemon running and do you have permissions?"
     fi
 
     # Make sure we are not about to overwrite an exsiting installation
@@ -133,7 +133,6 @@ set -eo pipefail
     mkdir -p ./$targetDirname/secrets
 
     mv $tmpLicense ./$targetDirname/secrets
-
 
     # Pull down the docker containers
     docker pull --quiet norskvideo/norsk:v1.0.380-main
