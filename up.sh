@@ -23,13 +23,14 @@ usage() {
     echo "  Options:"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
     echo "    --turn : launch a local turn server"
+    echo "    --check : Check that the docker yaml is compatible with the installed docker compose"
     echo "  Environment variables:"
     echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
 }
 
 main() {
     local -r upDown="$1"
-    local action
+    local action="up -d"
     local -r licenseFilePath=$(readlink -f $LICENSE_FILE)
     local networkMode=$NETWORK_MODE_DEFAULT
 
@@ -41,9 +42,9 @@ main() {
     fi
 
     # Verify that we can at least get docker version output
-    if ! docker --version; then
-        echo "Docker is not installed on your system"
-        echo "Please install Docker and start the Docker daemon before proceeding"
+    if ! docker compose version; then
+        echo "Docker Compose is not installed on your system"
+        echo "Please install it and start the Docker daemon before proceeding"
         echo "You can find the installation instructions at: https://docs.docker.com/get-docker/"
         exit 1
     fi
@@ -78,6 +79,10 @@ main() {
                 localTurn="true"
                 shift 1
             ;;
+            --check)
+                action="config --quiet"
+                shift 1
+            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
@@ -106,7 +111,7 @@ main() {
     fi
 
     ./down.sh
-    local cmd="${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings up -d"
+    local cmd="${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $action"
     echo "Launching with:"
     echo "  $cmd"
     $cmd

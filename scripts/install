@@ -104,7 +104,7 @@ set -eo pipefail
     # Check that docker compose is available and running
     require_util "docker" "run the Norsk containers"
     # We have docker, but do we have docker compose v2
-    composeVersion=$(docker compose version 2> /dev/null |  grep -i "Docker Compose version ")
+    composeVersion=$(docker compose version --short 2> /dev/null)
     if [ $? -ne 0 ]; then
         oops "you do not have docker compose v2 installed, which I need to run the Norsk containers"
     fi
@@ -136,17 +136,20 @@ set -eo pipefail
         oops "SHA-256 hash mismatch in '$releaseURL'; expected $releaseHash, got $calculatedHash"
     fi
 
-    unpack=$tmpDir/unpack
-    mkdir -p "$unpack"
-    tar -xf "$tarball" -C "$unpack" || oops "failed to unpack '$releaseURL'"
+    unpackTo=$tmpDir/unpack
+    mkdir -p "$unpackTo"
+    tar -xf "$tarball" -C "$unpackTo" || oops "failed to unpack '$releaseURL'"
+    unpackDir=$(realpath "$unpackTo"/norsk-studio*/)
+    rm -rf unpackDir/scripts
+
+    mkdir -p "$unpackDir"/secrets
+    mv "$tmpLicense" "$unpackDir"/secrets
+
+    # Do a dry run of the compose command to make sure that the installed version is compatible our YAML
+    "$unpackDir/up.sh" --check > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
 
     mkdir -p ./$targetDirname
-    mv "$unpack"/norsk-studio*/* ./$targetDirname
-
-    # Move the license file into place
-    mkdir -p ./$targetDirname/secrets
-
-    mv $tmpLicense ./$targetDirname/secrets
+    mv "$unpackDir"/* ./$targetDirname
 
     # Pull down the docker containers
     echo "Downloading containers"
@@ -160,8 +163,6 @@ set -eo pipefail
     for source in InkDrop.ts Weaving.ts ; do
         fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
     done
-
-    rm -rf norsk-studio/scripts
 
     echo "Installation complete. To start Norsk Studio, change to the 'norsk-studio'"
     echo "directory and run './up.sh'.  To stop it, just run './down.sh'."
