@@ -146,7 +146,7 @@ set -eo pipefail
     mv "$tmpLicense" "$unpackDir"/secrets
 
     # Do a dry run of the compose command to make sure that the installed version is compatible our YAML
-    "$unpackDir/up.sh" --check > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
+    # "$unpackDir/up.sh" --check > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
 
     mkdir -p ./$targetDirname
     mv "$unpackDir"/* ./$targetDirname
