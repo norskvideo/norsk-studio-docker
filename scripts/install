@@ -49,18 +49,18 @@ set -eo pipefail
     targetDirname="norsk-studio"
     releaseVersion="v1.0.383"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
-
     releaseHash="fb692559f28da511e346dfd7ecf637cc68a87743ba4a4851f10928617d3ec162"
+
     tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
         oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
     tmpLicense=$tmpDir/license.json
     tarball=$tmpDir/norsk-studio-$releaseVersion.tar.gz
 
     cleanup() {
-        # shellcheck disable=SC2317
         rm -rf "$tmpDir"
-        echo
     }
+
+    trap cleanup EXIT INT QUIT TERM
 
     echo
     echo "Welcome to the Norsk Studio installer.  This script will download"
@@ -69,14 +69,12 @@ set -eo pipefail
     echo "called norsk-studio containing a couple of helper scripts and some"
     echo "sample content. In total, this requires 7GB of disk space. After"
     echo "installation, you can completely remove Norsk Studio by simply"
-    echo "deleting the norsk-studio directory and removing the two docker"
+    echo "deleting the norsk-studio directory and removing the docker"
     echo "containers."
     echo
     echo "If you wish to proceed then press 'enter', otherwise"
     echo "press ctrl-c to abort the script."
     read -r
-
-    trap cleanup EXIT INT QUIT TERM
 
     # Check prerequisites
     echo "Checking prerequisites"
@@ -127,48 +125,30 @@ set -eo pipefail
     echo "Found docker compose $composeVersion and other required utilities, proceeding"
     echo
 
-    echo "Downloading Norsk Studio from '$releaseURL'"
-    fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
-
-    calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
-
-    if [ "$calculatedHash" != "$releaseHash" ]; then
-        oops "SHA-256 hash mismatch in '$releaseURL'; expected $releaseHash, got $calculatedHash"
-    fi
-
     unpackTo=$tmpDir/unpack
     mkdir -p "$unpackTo"
-    tar -xf "$tarball" -C "$unpackTo" || oops "failed to unpack '$releaseURL'"
+
+    if [ "$1" != "--local" ]; then
+        echo "Downloading Norsk Studio from '$releaseURL'"
+        fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
+
+        calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
+
+        if [ "$calculatedHash" != "$releaseHash" ]; then
+            oops "SHA-256 hash mismatch in '$releaseURL'; expected $releaseHash, got $calculatedHash"
+        fi
+
+        tar -xf "$tarball" -C "$unpackTo" || oops "failed to unpack '$releaseURL'"
+    else
+        mkdir -p "$unpackTo/norsk-studio-local"
+        cp -r ./* "$unpackTo/norsk-studio-local/"
+    fi
+
     unpackDir=$(realpath "$unpackTo"/norsk-studio*/)
-    rm -rf unpackDir/scripts
 
     mkdir -p "$unpackDir"/secrets
     mv "$tmpLicense" "$unpackDir"/secrets
 
-    # Do a dry run of the compose command to make sure that the installed version is compatible our YAML
-    # "$unpackDir/up.sh" --check > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
-
-    mkdir -p ./$targetDirname
-    mv "$unpackDir"/* ./$targetDirname
-
-    # Pull down the docker containers
-    echo "Downloading containers"
-    docker pull norskvideo/norsk:v1.0.380-main
-    docker pull norskvideo/norsk-studio:1.0.381
-
-    # Pull down the sample media files
-    echo "Downloading media samples"
-    sourcesDir=$targetDirname/sources
-    mkdir -p $sourcesDir
-    for source in InkDrop.ts Weaving.ts ; do
-        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
-    done
-
-    echo "Installation complete. To start Norsk Studio, change to the 'norsk-studio'"
-    echo "directory and run './up.sh'.  To stop it, just run './down.sh'."
-    echo "If you want to send in a sample SRT source to the example workflows,"
-    echo "then you can use './sample-srt-source.sh'."
-    echo "Thank you for installing, and enjoy using Norsk Studio!"
-    echo
-
+    mkdir -p "$targetDirname"
+    "$unpackDir"/scripts/install-phase-ii "$unpackDir" "$targetDirname"
 } # End of wrapping
