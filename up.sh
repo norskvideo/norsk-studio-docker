@@ -23,7 +23,7 @@ usage() {
     echo "  Options:"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
     echo "    --turn : launch a local turn server"
-    echo "    --check : Check that the docker yaml is compatible with the installed docker compose"
+    echo "    --merge filename : build a single compose file from your options"
     echo "  Environment variables:"
     echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
 }
@@ -33,6 +33,7 @@ main() {
     local action="up -d"
     local -r licenseFilePath=$(readlink -f $LICENSE_FILE)
     local networkMode=$NETWORK_MODE_DEFAULT
+    local toFile=""
 
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
@@ -79,9 +80,15 @@ main() {
                 localTurn="true"
                 shift 1
             ;;
-            --check)
-                action="config --quiet"
-                shift 1
+            --merge)
+                if [ "$#" -le 1 ]; then
+                    echo "merge needs an output file specified"
+                    usage
+                    exit 1
+                fi
+                action="config"
+                toFile="$2"
+                shift 2
             ;;
             *)
                 echo "Error: unknown option $1"
@@ -114,10 +121,14 @@ main() {
     local cmd="${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $action"
     echo "Launching with:"
     echo "  $cmd"
-    $cmd
-
-    echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
-    echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
+    if [[ $toFile == "" ]]; then
+        $cmd
+        echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
+        echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
+    else
+        $cmd > "$toFile"
+        echo "Combined docker compose file written to $toFile"
+    fi
 }
 
 main "$@"
