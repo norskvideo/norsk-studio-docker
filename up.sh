@@ -23,6 +23,7 @@ usage() {
     echo "  Options:"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
     echo "    --turn : launch a local turn server"
+    echo "    --nvidia : enable nvidia access"
     echo "    --merge filename : build a single compose file from your options"
     echo "  Environment variables:"
     echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
@@ -51,6 +52,7 @@ main() {
     fi
 
     local localTurn="false"
+    local nvidiaSettings=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -90,6 +92,16 @@ main() {
                 toFile="$2"
                 shift 2
             ;;
+            --nvidia)
+                if [[ "$OSTYPE" == "linux"* ]]; then
+                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
+                    shift 1
+                else
+                    echo "nvidia is unsupported on $OSTYPE"
+                    usage
+                    exit 1
+                fi
+            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
@@ -104,13 +116,13 @@ main() {
         networkDir="docker-networking"
     fi
 
+    local -r studioSettings="-f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml"
+    local -r norskMediaSettings="-f yaml/servers/norsk-media.yaml -f yaml/$networkDir/norsk-media.yaml"
+
     local turnSettings=""
     if [[ $localTurn == "true" ]]; then
         turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
     fi
-
-    local -r studioSettings="-f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml"
-    local -r norskMediaSettings="-f yaml/servers/norsk-media.yaml -f yaml/$networkDir/norsk-media.yaml"
 
     local urlPrefixSettings=""
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
@@ -118,7 +130,8 @@ main() {
     fi
 
     ./down.sh
-    local cmd="${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $action"
+    # The sed is just to remove multiple spaces when options are blank...
+    local cmd=$(echo "${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $nvidiaSettings $action" | sed 's/  \+/ /g')
     echo "Launching with:"
     echo "  $cmd"
     if [[ $toFile == "" ]]; then

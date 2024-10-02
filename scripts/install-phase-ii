@@ -50,6 +50,7 @@ main() {
     echo "directory and run './up.sh'.  To stop it, just run './down.sh'."
     echo "If you want to send in a sample SRT source to the example workflows,"
     echo "then you can use './sample-srt-source.sh'."
+    echo
     echo "Thank you for installing, and enjoy using Norsk Studio!"
     echo
 }

@@ -32,15 +32,9 @@ services:
     #   - /dev/nvme1n1 # More Quadra
     #   - /dev/ama_transcoder1 # AMD MA35D
     #   - /dev/flex-x4100 # Deltacast SDI
-    #       For Deltacast upi might well want ipc: host if
+    #       For Deltacast you might well want ipc: host if
     #       multiple Norsk instance access the same card
     ###############################################################
-    # Same for NVIDIA
-    # runtime: nvidia
-    ###############################################################
-    # environment:
-    #   - NVIDIA_VISIBLE_DEVICES=all
-    #   - NVIDIA_DRIVER_CAPABILITIES=all
 
     ###############################################################
     # The below are nothing to do with Norsk itself, but
