@@ -25,14 +25,19 @@ usage() {
     echo "    --turn : launch a local turn server"
     echo "    --nvidia : enable nvidia access"
     echo "    --merge filename : build a single compose file from your options"
+    echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
     echo "  Environment variables:"
     echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
 }
 
+realpath() {
+    local expanded="${1/#\~/$HOME}"
+    echo "$(cd "$(dirname "$expanded")" && pwd)/$(basename "$expanded")"
+}
+
 main() {
-    local -r upDown="$1"
     local action="up -d"
-    local -r licenseFilePath=$(readlink -f $LICENSE_FILE)
+    local -r licenseFilePath=$(realpath $LICENSE_FILE)
     local networkMode=$NETWORK_MODE_DEFAULT
     local toFile=""
 
@@ -53,6 +58,7 @@ main() {
 
     local localTurn="false"
     local nvidiaSettings=""
+    local logSettings=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -92,6 +98,17 @@ main() {
                 toFile="$2"
                 shift 2
             ;;
+            --logs)
+                if [ "$#" -le 1 ]; then
+                    echo "need to specify a directory for the logs to be written to"
+                    usage
+                    exit 1
+                fi
+                mkdir -p "$2"
+                export LOG_ROOT=$(realpath "$2")
+                logSettings="-f yaml/volumes/norsk-media-logs.yaml"
+                shift 2
+            ;;
             --nvidia)
                 if [[ "$OSTYPE" == "linux"* ]]; then
                     nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
@@ -111,9 +128,9 @@ main() {
 
     local networkDir
     if [[ "$networkMode" == "host" ]]; then
-        networkDir="host-networking"
+        networkDir="networking/host"
     else
-        networkDir="docker-networking"
+        networkDir="networking/docker"
     fi
 
     local -r studioSettings="-f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml"
@@ -131,7 +148,7 @@ main() {
 
     ./down.sh
     # The sed is just to remove multiple spaces when options are blank...
-    local cmd=$(echo "${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $nvidiaSettings $action" | sed 's/  \+/ /g')
+    local cmd=$(echo "${urlPrefixSettings}docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $action" | sed 's/  \+/ /g')
     echo "Launching with:"
     echo "  $cmd"
     if [[ $toFile == "" ]]; then
