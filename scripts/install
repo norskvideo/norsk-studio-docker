@@ -104,8 +104,8 @@ set -eo pipefail
     # Check that docker compose is available and running
     require_util "docker" "run the Norsk containers"
     # We have docker, but do we have docker compose v2
-    composeVersion=$(docker compose version --short 2> /dev/null)
-    if [ $? -ne 0 ]; then
+    composeVersion=$(docker compose version --short 2> /dev/null || true)
+    if [ -z "$composeVersion" ]; then
         oops "you do not have docker compose v2 installed, which I need to run the Norsk containers"
     fi
     # We have docker compose - check that docker is running
