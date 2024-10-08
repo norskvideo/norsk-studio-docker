@@ -15,7 +15,6 @@ if [[ "$OSTYPE" == "linux"* ]]; then
 else
     NETWORK_MODE_DEFAULT="docker"
 fi
-
 LICENSE_FILE="secrets/license.json"
 
 usage() {
@@ -152,11 +151,11 @@ main() {
     echo "Launching with:"
     echo "  $cmd"
     if [[ $toFile == "" ]]; then
-        $cmd
+        eval "$cmd"
         echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
         echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
     else
-        $cmd > "$toFile"
+        eval "$cmd" > "$toFile"
         echo "Combined docker compose file written to $toFile"
     fi
 }
