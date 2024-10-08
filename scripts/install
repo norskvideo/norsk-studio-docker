@@ -34,11 +34,11 @@ set -eo pipefail
         echo
 
         local firstTime=true
-        for base in ./ "$HOME" "$HOME/Downloads" "$HOME/Documents"; do
+        for base in . "$HOME" "$HOME/Downloads" "$HOME/Documents"; do
             for f in "$base"/*norsk_license*.json*; do
                 if [[ -f "$f" ]]; then
                     if [ $firstTime == true ]; then
-                        echo "I have looked for potential Norsk licenses and you might want one of these file(s):"
+                        echo "I looked for potential Norsk licenses and you might want one of these file(s):"
                         firstTime=false
                     fi
                     echo "    $f"
