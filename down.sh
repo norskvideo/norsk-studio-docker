@@ -5,7 +5,7 @@ cd "${0%/*}"
 function main() {
     local i
     local firstTime=true
-    for i in $(docker ps --all --format '{{.Names}}' | grep -e ^norsk-); do
+    for i in $(docker ps --all --format '{{.Names}}' | grep -e ^norsk- -e ^sample-srt-); do
         if [ $firstTime == true ]; then
             echo "Stopping running containers:"
             firstTime=false

@@ -25,25 +25,56 @@ set -eo pipefail
     }
 
     find_license() {
+        trap 'return 1' SIGINT # to exit from read
+
         echo
         echo "Norsk Studio needs a license file to operate."
         echo "You can get a FREE trial license from"
         echo "https://norsk.video"
         echo
 
+        local firstTime=true
+        for base in ./ "$HOME" "$HOME/Downloads" "$HOME/Documents"; do
+            for f in "$base"/*norsk_license*.json*; do
+                if [[ -f "$f" ]]; then
+                    if [ $firstTime == true ]; then
+                        echo "I have looked for potential Norsk licenses and you might want one of these file(s):"
+                        firstTime=false
+                    fi
+                    echo "    $f"
+                fi
+            done
+        done
+
         while [[ ! -f "$abs_lp" ]]; do
-            read -r -e -p "Enter the path to your Norsk license file (TAB completion is available): " license_path
+            # Allow escapes (no -r), because that is what readline completion allows
+            read -e -p "Enter the path to your Norsk license file (TAB completion is available): " license_path
             if [[ $license_path == "" ]]; then
                 oops "no license file provided"
             fi
-            abs_lp=$(realpath $license_path)
+            # Readline also accepts quotes during autocompletion
+            abs_lp="$(realpath "$(echo "$license_path" | tr -d '"')" 2>/dev/null)"
 
             if [[ ! -f "$abs_lp" ]]; then
-                echo "The specified license file not found. Please try again."
+                if is_json_license "$license_path"; then
+                    echo
+                    echo "It looks like you pasted in the text of the license, using that."
+                    echo "$license_path" > "$tmpLicense"
+                    abs_lp="$tmpLicense"
+                else
+                    echo "The specified license file not found. Please try again."
+                fi
             else
                 cp "$abs_lp" "$tmpLicense"
             fi
         done
+    }
+
+    is_json_license() {
+        set -eo pipefail
+        [[ -x "$(command -v grep 2>&1)" ]] || return 1
+        echo "$1" | grep -z '^\s*{\s*"email"' >/dev/null 2>&1 || return 1
+        echo "$1" | grep -z '}\s*$' >/dev/null 2>&1 || return 1
     }
 
     targetDirname="norsk-studio"
@@ -53,8 +84,8 @@ set -eo pipefail
 
     tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
         oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
-    tmpLicense=$tmpDir/license.json
-    tarball=$tmpDir/norsk-studio-$releaseVersion.tar.gz
+    tmpLicense="$tmpDir/license.json"
+    tarball="$tmpDir/norsk-studio-$releaseVersion.tar.gz"
 
     cleanup() {
         rm -rf "$tmpDir"
