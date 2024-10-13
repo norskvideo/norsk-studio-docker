@@ -1,0 +1,4 @@
+services:
+  norsk-media:
+    devices:
+    - /dev/ama_transcoder1

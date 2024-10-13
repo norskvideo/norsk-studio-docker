@@ -5,7 +5,7 @@ services:
   norsk-media:
     container_name: norsk-media
     image: $NORSK_MEDIA_IMAGE
-    command: --license-file /run/secrets/license.json
+    command: --license-file /run/secrets/license.json ${enableMa35d:-}
     # CEF (needs a large amount of shared memory)
     shm_size: '2gb'
     # privileged: true
