@@ -181,7 +181,7 @@ main() {
     fi
 
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
-      export PUBLIC_URL_PREFIX="http://$HOST_IP:8080 "
+      export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
       envVars+="PUBLIC_URL_PREFIX"
     fi
 
