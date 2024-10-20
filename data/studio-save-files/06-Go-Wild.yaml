@@ -8,9 +8,6 @@ __layout:
   - id: camera2_preview
     x: 1056
     y: -272
-  - id: hls_and_dash
-    x: 1808
-    y: 352
   - id: live_camera
     x: 1024
     y: 576
@@ -25,6 +22,9 @@ __layout:
     y: 128
   - id: srt_sources
     x: 176
+    y: 352
+  - id: hls_and_dash
+    x: 1856
     y: 352
 __globalConfig: {}
 components:
@@ -257,33 +257,6 @@ components:
             - audio
             - video
           filter: camera2
-  - type: output.autoCmaf
-    config:
-      displayName: HLS and DASH
-      name: default
-      sessionId: false
-      segments:
-        retentionPeriod: 60
-        defaultSegmentCount: 0
-        targetSegmentDuration: 4
-        targetPartDuration: 1
-      s3Destinations: []
-      id: hls_and_dash
-    subscriptions:
-      - source: abr_ladder
-        streams:
-          type: take-specific-streams
-          select:
-            - video
-          filter:
-            - h264_1280x720
-            - h264_640x360
-            - h264_320x180
-      - source: source_switcher
-        streams:
-          type: take-first-stream
-          select:
-            - audio
   - type: output.preview
     config:
       displayName: Live Camera
@@ -345,7 +318,7 @@ components:
     config:
       displayName: SRT Sources
       port: 5001
-      ip: 0.0.0.0
+      host: 0.0.0.0
       passphrase: ""
       socketOptions: {}
       sourceNames: strict
@@ -354,3 +327,30 @@ components:
         - camera2
       id: srt_sources
     subscriptions: []
+  - type: output.autoCmaf
+    config:
+      displayName: HLS and DASH
+      name: default
+      sessionId: false
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+      s3Destinations: []
+      id: hls_and_dash
+    subscriptions:
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          select:
+            - audio
+      - source: abr_ladder
+        streams:
+          type: take-specific-streams
+          select:
+            - video
+          filter:
+            - h264_1280x720
+            - h264_640x360
+            - h264_320x180

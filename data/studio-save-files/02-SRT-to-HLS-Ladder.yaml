@@ -6,7 +6,7 @@ __layout:
     x: 1024
     y: 304
   - id: ll-hls
-    x: 1456
+    x: 1504
     y: 528
 __globalConfig: {}
 components:
@@ -14,7 +14,7 @@ components:
     config:
       displayName: SRT Source
       port: 5001
-      ip: 0.0.0.0
+      host: 0.0.0.0
       passphrase: ""
       socketOptions: {}
       sourceNames: permissive
