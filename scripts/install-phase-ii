@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -eo pipefail
+# This script completes the setup of Norsk Studio on your system.  It is launched
+# once the release tarball has been pulled locally to a tmp directory and a license file is present
+# It expects to be run in the parent folder into which norsk-studio is to be created and that an
+# empty taget (nosk-studio) directory already exists
+usage() {
+    echo "Usage: $(basename "$0") unpackDir targetDir" >&2
+    exit 1
+}
+
+# The top level installer has already checked that one of these is available...
+if command -v curl > /dev/null 2>&1; then
+    fetch() { curl  --silent --fail -L "$1" -o "$2"; }
+else
+    fetch() { wget --quiet "$1" -O "$2"; }
+fi
+
+pull() {
+    DOCKER_CLI_HINTS=false docker pull $1
+}
+
+main() {
+    local -r unpackDir=$1
+    local -r targetDirname=$2
+    # Do a dry run of the compose command to make sure that the installed version is compatible with our YAML
+    "$unpackDir/up.sh" --merge /dev/null  > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
+    rm -rf "$unpackDir/scripts"
+    mv "$unpackDir"/* "$targetDirname"
+
+    # Pull down the docker containers
+    echo "Downloading containers"
+    pull norskvideo/norsk:v1.0.380-main
+    echo
+    pull norskvideo/norsk-studio:1.0.381
+    echo
+
+    # Pull down the sample media files
+    echo "Downloading media samples"
+    sourcesDir="$targetDirname/sources"
+    mkdir -p "$sourcesDir"
+    for source in InkDrop.ts Weaving.ts ; do
+        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
+    done
+
+    echo
+    echo "Installation complete."
+    echo
+    echo "To start Norsk Studio, change to the norsk-studio directory"
+    echo "and run the up.sh script. Typing the following commands"
+    echo "should get you started..."
+    echo
+    echo "cd norsk-studio"
+    echo "./up.sh"
+    echo
+    echo "To stop it, just run"
+    echo
+    echo "./up.sh"
+    echo "./down.sh"
+    echo
+    echo "If you want to send in a sample SRT source to the example workflows,"
+    echo "then you can use './sample-srt-source.sh'."
+    echo
+    echo "Thank you for installing, and enjoy using Norsk Studio!"
+    echo
+}
+
+if [[ "$#" -ne 2 ]]; then
+    usage
+else
+    if [[ ! -d "$1" ]]; then
+        echo "Unpack directory not found: $1" >&2
+        usage
+    fi
+    if [[ ! -d "$2" ]]; then
+        echo "Target directory not found: $2" >&2
+        usage
+    fi
+fi
+
+main "$@"

@@ -5,7 +5,7 @@ services:
   norsk-media:
     container_name: norsk-media
     image: $NORSK_MEDIA_IMAGE
-    command: --license-file /run/secrets/license.json
+    command: --license-file /run/secrets/license.json ${enableMa35d:-}
     # CEF (needs a large amount of shared memory)
     shm_size: '2gb'
     # privileged: true
@@ -32,15 +32,9 @@ services:
     #   - /dev/nvme1n1 # More Quadra
     #   - /dev/ama_transcoder1 # AMD MA35D
     #   - /dev/flex-x4100 # Deltacast SDI
-    #       For Deltacast upi might well want ipc: host if
+    #       For Deltacast you might well want ipc: host if
     #       multiple Norsk instance access the same card
     ###############################################################
-    # Same for NVIDIA
-    # runtime: nvidia
-    ###############################################################
-    # environment:
-    #   - NVIDIA_VISIBLE_DEVICES=all
-    #   - NVIDIA_DRIVER_CAPABILITIES=all
 
     ###############################################################
     # The below are nothing to do with Norsk itself, but

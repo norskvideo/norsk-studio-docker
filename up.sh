@@ -2,8 +2,8 @@
 set -eo pipefail
 cd "${0%/*}"
 
-export NORSK_MEDIA_IMAGE=norskvideo/norsk:v1.0.380-main
-export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.381
+export NORSK_MEDIA_IMAGE=norskvideo/norsk:v1.0.387-main
+export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.382
 #export NORSK_STUDIO_IMAGE=norsk-studio:latest
 
 declare NETWORK_MODE_DEFAULT
@@ -15,7 +15,6 @@ if [[ "$OSTYPE" == "linux"* ]]; then
 else
     NETWORK_MODE_DEFAULT="docker"
 fi
-
 LICENSE_FILE="secrets/license.json"
 
 usage() {
@@ -23,21 +22,37 @@ usage() {
     echo "  Options:"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
     echo "    --turn : launch a local turn server"
-    echo "    --check : Check that the docker yaml is compatible with the installed docker compose"
+    echo "    --enable-nvidia : enable nvidia access (Linux only)"
+    echo "    --enable-quadra : enable quadra access (Linux only)"
+    echo "    --enable-ma35d : enable AMD MA35D access (Linux/x86_64 only)"
+    echo "    --merge filename : build a single compose file from your options"
+    echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
     echo "  Environment variables:"
     echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
 }
 
+realpath() {
+    local expanded="${1/#\~/$HOME}"
+    echo "$(cd "$(dirname "$expanded")" && pwd)/$(basename "$expanded")"
+}
+
 main() {
-    local -r upDown="$1"
     local action="up -d"
-    local -r licenseFilePath=$(readlink -f $LICENSE_FILE)
+    local -r licenseFilePath=$(realpath $LICENSE_FILE)
     local networkMode=$NETWORK_MODE_DEFAULT
+    local toFile=""
+    local -a envVars
 
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
         echo "No license.json file found in $licenseFilePath"
         echo "  See Readme for instructions on how to obtain one."
+        exit 1
+    fi
+
+    # Check that docker is running
+    if ! docker images > /dev/null 2>&1; then
+        echo "Either Docker is not installed or I can't run it - is the daemon running and do you have permissions?"
         exit 1
     fi
 
@@ -49,7 +64,13 @@ main() {
         exit 1
     fi
 
+    arch=$(docker info --format '{{ .Architecture }}')
+
     local localTurn="false"
+    local nvidiaSettings=""
+    local ma35dSettings=""
+    local quadraSettings=""
+    local logSettings=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -70,7 +91,7 @@ main() {
                         ;;
                     esac
                 else
-                    echo "network-mode is unsupported on $OSTYPE"
+                    echo "network-mode is not supported on $OSTYPE"
                     usage
                     exit 1
                 fi
@@ -79,9 +100,57 @@ main() {
                 localTurn="true"
                 shift 1
             ;;
-            --check)
-                action="config --quiet"
-                shift 1
+            --merge)
+                if [[ "$#" -le 1 ]]; then
+                    echo "merge needs an output file specified"
+                    usage
+                    exit 1
+                fi
+                action="config"
+                toFile="$2"
+                shift 2
+            ;;
+            --logs)
+                if [[ "$#" -le 1 ]]; then
+                    echo "need to specify a directory for the logs to be written to"
+                    usage
+                    exit 1
+                fi
+                mkdir -p "$2"
+                export LOG_ROOT=$(realpath "$2")
+                logSettings="-f yaml/volumes/norsk-media-logs.yaml"
+                shift 2
+            ;;
+            --enable-nvidia)
+                if [[ "$OSTYPE" == "linux"* ]]; then
+                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
+                    shift 1
+                else
+                    echo "nvidia is not supported on $OSTYPE"
+                    usage
+                    exit 1
+                fi
+            ;;
+            --enable-quadra)
+                if [[ "$OSTYPE" == "linux"* ]]; then
+                    quadraSettings="-f yaml/hardware-devices/quadra.yaml"
+                    shift 1
+                else
+                    echo "quadra is not supported on $OSTYPE"
+                    usage
+                    exit 1
+                fi
+            ;;
+            --enable-ma35d)
+                if [[ "$OSTYPE" == "linux"* && "$arch" == "x86_64" ]]; then
+                    ma35dSettings="-f yaml/hardware-devices/ma35d.yaml"
+                    export enableMa35d="--enable-ma35d"
+                    shift 1
+                else
+                    echo "ma35d is only support on linux/x84_64"
+                    usage
+                    exit 1
+                fi
             ;;
             *)
                 echo "Error: unknown option $1"
@@ -92,32 +161,53 @@ main() {
 
     local networkDir
     if [[ "$networkMode" == "host" ]]; then
-        networkDir="host-networking"
+        networkDir="networking/host"
     else
-        networkDir="docker-networking"
-    fi
-
-    local turnSettings=""
-    if [[ $localTurn == "true" ]]; then
-        turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
+        networkDir="networking/docker"
     fi
 
     local -r studioSettings="-f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml"
     local -r norskMediaSettings="-f yaml/servers/norsk-media.yaml -f yaml/$networkDir/norsk-media.yaml"
 
-    local urlPrefixSettings=""
+    local turnSettings=""
+    if [[ $localTurn == "true" ]]; then
+        turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
+        if [[ "$networkMode" == "host" ]]; then
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+        else
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+        fi
+        envVars+="GLOBAL_ICE_SERVERS"
+    fi
+
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
-      urlPrefixSettings="PUBLIC_URL_PREFIX=http://$HOST_IP:8080 "
+      export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
+      envVars+="PUBLIC_URL_PREFIX"
     fi
 
     ./down.sh
-    local cmd="${urlPrefixSettings}docker compose $norskMediaSettings $studioSettings $turnSettings $action"
+    # The sed is just to remove multiple spaces when options are blank...
+    local cmd=$(echo "docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $ma35dSettings  $quadraSettings $action" | sed 's/  \+/ /g')
     echo "Launching with:"
     echo "  $cmd"
-    $cmd
+    local firstTime=true
+    for envVar in "${envVars[@]}"
+    do
+        if [[ $firstTime == true ]]; then
+            echo "Env vars set:"
+            firstTime=false
+        fi
+        echo "   ${envVar}: ${!envVar}"
+    done
 
-    echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
-    echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
+    if [[ $toFile == "" ]]; then
+        eval "$cmd"
+        echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
+        echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
+    else
+        eval "$cmd" > "$toFile"
+        echo "Combined docker compose file written to $toFile"
+    fi
 }
 
 main "$@"

@@ -5,12 +5,13 @@ __layout:
   - id: webrtc_output
     x: 1232
     y: 544
+__globalConfig: {}
 components:
   - type: input.srt-listener
     config:
       displayName: SRT Source
       port: 5001
-      ip: 0.0.0.0
+      host: 0.0.0.0
       passphrase: ""
       socketOptions: {}
       sourceNames: permissive
