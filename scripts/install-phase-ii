@@ -32,7 +32,7 @@ main() {
     local containers=()
     while IFS= read -r line; do
         containers+=("$line")
-    done < <(grep "^[^#]*export NORSK_.*IMAGE=" ./up.sh | sed 's#.*=##')
+    done < <(grep "^[^#]*export NORSK_.*IMAGE=" "$targetDirname/up.sh" | sed 's#.*=##')
 
     echo "Downloading containers:"
     for container in "${containers[@]}" ; do
