@@ -28,12 +28,20 @@ main() {
     rm -rf "$unpackDir/scripts"
     mv "$unpackDir"/* "$targetDirname"
 
-    # Pull down the docker containers
-    echo "Downloading containers"
-    pull norskvideo/norsk:v1.0.380-main
-    echo
-    pull norskvideo/norsk-studio:1.0.381
-    echo
+    # Check which containers up.sh expects and pull them
+    local containers=()
+    while IFS= read -r line; do
+        containers+=("$line")
+    done < <(grep "^[^#]*export NORSK_.*IMAGE=" ./up.sh | sed 's#.*=##')
+
+    echo "Downloading containers:"
+    for container in "${containers[@]}" ; do
+        echo
+        echo "Downloading $container"
+        pull "$container"
+        echo
+
+    done
 
     # Pull down the sample media files
     echo "Downloading media samples"
