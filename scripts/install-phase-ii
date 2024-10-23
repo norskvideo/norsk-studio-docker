@@ -47,21 +47,27 @@ main() {
     echo "Installation complete."
     echo
     echo "To start Norsk Studio, change to the norsk-studio directory"
-    echo "and run the up.sh script. Typing the following commands"
+    echo "and run the 'up.sh' script. Typing the following commands"
     echo "should get you started..."
     echo
     echo "cd norsk-studio"
     echo "./up.sh"
     echo
-    echo "To stop it, just run"
+    echo "If you want to send in a sample SRT source to the example workflows,"
+    echo "then you can use e.g."
     echo
-    echo "./up.sh"
+    echo "./sample-srt-source.sh camera1 start"
+    echo "./sample-srt-source.sh camera2 start"
+    echo
+    echo "Running './up.sh --help' will show you the command line options."
+    echo
+    echo "To stop Norsk Studio (and any sample sources), just run"
+    echo
     echo "./down.sh"
     echo
-    echo "If you want to send in a sample SRT source to the example workflows,"
-    echo "then you can use './sample-srt-source.sh'."
     echo
-    echo "Thank you for installing, and enjoy using Norsk Studio!"
+    echo "Thank you for installing.  Enjoy using Norsk Studio!"
+    echo "Do let us know how you get on."
     echo
 }
 
