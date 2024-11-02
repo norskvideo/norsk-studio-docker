@@ -31,7 +31,7 @@ STUDIO_DOCUMENT_OVERRIDES=${STUDIO_DOCUMENT_OVERRIDES:-}
 # If non-empty, Studio will use this file to override configuration using
 # in the same manner as the usage of environment variables
 
-_GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:127.0.0.1:3478", "username": "norsk", "credential": "norsk" }]'
+GLOBAL_ICE_SERVERS=${GLOBAL_ICE_SERVERS:-}
 
 # Media URLs that Studio publishes will start with the below
 PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-http://127.0.0.1:8080}
