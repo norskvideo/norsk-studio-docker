@@ -4,16 +4,18 @@ cd "${0%/*}"
 
 export NORSK_MEDIA_IMAGE=norskvideo/norsk:v1.0.387-main
 export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.382
-#export NORSK_STUDIO_IMAGE=norsk-studio:latest
 
 declare NETWORK_MODE_DEFAULT
+declare LOCAL_TURN_DEFAULT
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
 if [[ "$OSTYPE" == "linux"* ]]; then
     NETWORK_MODE_DEFAULT="host"
+    LOCAL_TURN_DEFAULT=false
 else
     NETWORK_MODE_DEFAULT="docker"
+    LOCAL_TURN_DEFAULT=true
 fi
 LICENSE_FILE="secrets/license.json"
 
@@ -21,10 +23,10 @@ usage() {
     echo "Usage: ${0##*/} [options]"
     echo "  Options:"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
-    echo "    --turn : launch a local turn server"
+    echo "    --turn [true|false]: launch a local turn server. Defaults to $LOCAL_TURN_DEFAULT on $OSTYPE"
     echo "    --enable-nvidia : enable nvidia access (Linux only)"
     echo "    --enable-quadra : enable quadra access (Linux only)"
-    echo "    --enable-ma35d : enable AMD MA35D access (Linux/x86_64 only)"
+    echo "    --enable-ma35d : enable AMD MA35D access (Linux on x86_64 only)"
     echo "    --merge filename : build a single compose file from your options"
     echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
     echo "  Environment variables:"
@@ -66,7 +68,7 @@ main() {
 
     arch=$(docker info --format '{{ .Architecture }}')
 
-    local localTurn="false"
+    local localTurn=$LOCAL_TURN_DEFAULT
     local nvidiaSettings=""
     local ma35dSettings=""
     local quadraSettings=""
@@ -97,8 +99,17 @@ main() {
                 fi
             ;;
             --turn)
-                localTurn="true"
-                shift 1
+                case "$2" in
+                    true | false)
+                        localTurn=$2
+                        shift 2
+                    ;;
+                    *)
+                        echo "--turn must be followed by true or false"
+                        usage
+                        exit 1
+                    ;;
+                esac
             ;;
             --merge)
                 if [[ "$#" -le 1 ]]; then
@@ -181,8 +192,8 @@ main() {
     fi
 
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
-      export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
-      envVars+="PUBLIC_URL_PREFIX"
+        export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
+        envVars+="PUBLIC_URL_PREFIX"
     fi
 
     ./down.sh
