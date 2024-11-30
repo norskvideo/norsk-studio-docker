@@ -1,0 +1,115 @@
+__layout:
+  - id: silence
+    x: 464
+    y: 608
+  - id: override_audio_key
+    x: 880
+    y: 608
+  - id: override_video_key
+    x: 880
+    y: 368
+  - id: video_test_card
+    x: 464
+    y: 368
+  - id: cmaf_output
+    x: 1344
+    y: 416
+  - id: stream_preview
+    x: 1344
+    y: 656
+__globalConfig: {}
+components:
+  - type: input.silence
+    config:
+      displayName: Silence
+      sampleRate: 48000
+      channelLayout: stereo
+      id: silence
+    subscriptions: []
+  - type: processor.StreamKeyOverride
+    config:
+      displayName: Override Audio Key
+      mode: simple
+      output: individually-selectable
+      sourceName: sampleSource
+      programNumber: 1
+      streamId: 257
+      renditionName: defaultRendition
+      id: override_audio_key
+    subscriptions:
+      - source: silence
+        streams:
+          type: take-first-stream
+          select:
+            - audio
+  - type: processor.StreamKeyOverride
+    config:
+      displayName: Override Video Key
+      mode: simple
+      output: individually-selectable
+      sourceName: sampleSource
+      programNumber: 1
+      streamId: 256
+      renditionName: defaultRendition
+      id: override_video_key
+    subscriptions:
+      - source: video_test_card
+        streams:
+          type: take-first-stream
+          select:
+            - video
+  - type: input.videoTestCard
+    config:
+      displayName: Video Test Card
+      resolution:
+        width: 640
+        height: 360
+      frameRate:
+        frames: 25
+        seconds: 1
+      sourceName: video
+      pattern: smpte75
+      id: video_test_card
+    subscriptions: []
+  - type: output.autoCmaf
+    config:
+      displayName: CMAF Output
+      name: output
+      sessionId: false
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+      s3Destinations: []
+      id: cmaf_output
+    subscriptions:
+      - source: override_video_key
+        streams:
+          type: take-all-streams
+          select:
+            - video
+      - source: override_audio_key
+        streams:
+          type: take-all-streams
+          select:
+            - audio
+  - type: output.preview
+    config:
+      displayName: Stream Preview
+      bufferDelayMs: 200
+      id: stream_preview
+    subscriptions:
+      - source: override_video_key
+        streams:
+          type: take-specific-stream
+          select:
+            - video
+          filter: video_test_card
+      - source: override_audio_key
+        streams:
+          type: take-specific-stream
+          select:
+            - audio
+          filter: silence
+
