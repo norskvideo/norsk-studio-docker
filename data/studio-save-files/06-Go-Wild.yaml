@@ -306,7 +306,9 @@ components:
     config:
       displayName: On Screen Graphic
       initialGraphic: Norsk.png
-      initialPosition: topleft
+      initialPosition:
+        type: named
+        position: topleft
       id: on_screen_graphic
     subscriptions:
       - source: source_switcher
