@@ -5,6 +5,13 @@ services:
       - 3478:3478/tcp # TURN tcp transport
       - 5349:5349/tcp # tls
       - 5349:5349/udp # tls
-      - 59160-59200:59160-59200/udp  # UDP relay
+      # This is the range of ports that the TURN server itself uses (see turnserver.conf)
+      # - 59160-59199:59160-59199/udp  # UDP relay
+      # They don't need to be exposed in the compose file as the usual UDP hole punching
+      # processes should open them. You might well want them explicitly mapped in production
+      # (although for a production turn server host networking may well be the correct choice)
+      # but for this starter kit, not exposing them helps reduce port clashes as we have
+      # no control over what else is running...
+
     networks:
       - norskNetwork
