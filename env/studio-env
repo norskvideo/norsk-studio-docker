@@ -7,7 +7,7 @@ STUDIO_WORKING_DIRECTORY=${STUDIO_WORKING_DIRECTORY:-/data/}
 # Example folder structure below:
 #
 # ─data
-# ├── bugs
+# ├── graphics
 # │  └── trinorsk.png
 # ├── studio-save-files
 # │  ├── OnscreenGraphic.yaml
