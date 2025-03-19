@@ -54,6 +54,42 @@ sudo chown -R norsk:norsk /var/norsk-studio/
 ./deployed/support-containers.sh pull --quiet
 docker pull xmartlabs/htpasswd@sha256:fac862e543f80d72386492aa87b0f6f3c1c06a49a845e553ebea91750ce6320c
 
+# Set up Quadra support
+cd /var/norsk-studio/
+curl -O 'https://releases.netint.com/quadra/L8Q6OW2GRMBRJWF/Quadra_V5.2.0.zip'
+curl -O http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
+if [[
+  "$(md5sum Quadra_V5.2.0.zip | head -c 32)" == e458a75a9a09c8b59ce8a184ca9e5ad6 &&
+  "$(md5sum yasm-1.3.0.tar.gz | head -c 32)" == fc9e586751ff789b34b1f21d572d96af
+]]; then
+  python3 -c 'from zipfile import ZipFile; ZipFile("Quadra_V5.2.0.zip").extractall()'
+  tar -zxf yasm-1.3.0.tar.gz
+
+  # Dependencies
+  sudo DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y -q \
+        pkg-config git gcc ninja-build python3 \
+        python3-pip flex bison libpng-dev zlib1g-dev gnutls-bin uuid-runtime \
+        uuid-dev libglib2.0-dev libxml2 libxml2-dev
+  sudo pip3 install meson
+  (cd yasm-1.3.0/; ./configure && make && sudo make install)
+
+  (cd Quadra_V5.2.0/Quadra_SW_V5.2.0_RC3/libxcoder; bash build.sh)
+else
+  echo "Error: md5sums of Quadra_V5.2.0.zip or yasm-1.3.0.tar.gz did not match expected"
+  md5sum Quadra_V5.2.0.zip yasm-1.3.0.tar.gz
+  exit 1
+fi
+
+# Give the norsk user access to the hardware
+sudo usermod -aG disk norsk
+# Configure Norsk with access
+echo 'export DEPLOY_HARDWARE="yml/hardware-devices/quadra.yaml"' >> /var/norsk-studio/norsk-studio-starter-kit/deployed/Linode/norsk-config.sh
+
+# Initialize Netint Quadra support via libxcoder
+# (right now and at every boot, runs as user norsk)
+sudo systemctl enable --now /var/norsk-studio/norsk-studio-starter-kit/deployed/Linode/nilibxcoder.service
+
 
 # Install and start the systemd units (norsk-setup, norsk, and nginx)
 # Ubuntu: wants absolute paths
