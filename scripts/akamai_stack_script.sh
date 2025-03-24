@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Stack Script for installing Norsk Studio
+# Tested with Ubuntu 22.04 LTS and Debian 12
+
 # <UDF name="norsk_license" label="Norsk license JSON string" default="" />
 # <UDF name="studio_password" label="Frontend password for norsk-studio-admin" default="" />
 # <UDF name="domain_name" label="(Optional) Public domain name for deployment" default="" />
