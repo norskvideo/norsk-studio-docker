@@ -1,50 +1,115 @@
 __layout:
-  - id: camera1_preview
-    x: 560
-    y: -272
+  - id: srt_input
+    x: 0
+    y: 432
   - id: abr_ladder
-    x: 1520
-    y: 128
-  - id: camera2_preview
-    x: 1056
-    y: -272
-  - id: live_camera
-    x: 1024
-    y: 576
-  - id: browser_overlay
-    x: 1184
-    y: 128
+    x: 1728
+    y: 224
+  - id: ll-hls
+    x: 2048
+    y: 432
   - id: source_switcher
-    x: 576
-    y: 352
+    x: 656
+    y: 432
   - id: on_screen_graphic
-    x: 880
-    y: 128
-  - id: srt_sources
-    x: 176
-    y: 352
-  - id: hls_and_dash
-    x: 1856
-    y: 352
+    x: 960
+    y: 224
+  - id: browser_overlay
+    x: 1344
+    y: 224
+  - id: camera_one
+    x: 288
+    y: 816
+  - id: camera_two
+    x: 784
+    y: 816
+  - id: output_preview
+    x: 1712
+    y: 816
 __globalConfig: {}
 components:
-  - type: output.preview
+  - type: input.srt-listener
     config:
-      displayName: Camera1 Preview
-      bufferDelayMs: 500
-      id: camera1_preview
-    subscriptions:
-      - source: srt_sources
-        streams:
-          type: take-specific-stream
-          select:
-            - video
-            - audio
-          filter: camera1
+      displayName: SRT Input
+      port: 5001
+      host: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: permissive
+      streamIds:
+        - camera1
+        - camera2
+      notes: ""
+      id: srt_input
+    subscriptions: []
   - type: processor.fixedLadder
     config:
       displayName: ABR Ladder
       rungs:
+        - name: h264_1920x1080
+          software:
+            width: 1920
+            height: 1080
+            codec:
+              type: x264
+              bitrateMode:
+                value: 5000
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 8
+              bframes: 0
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 1920
+            height: 1080
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 5000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          logan:
+            width: 1920
+            height: 1080
+            codec:
+              type: logan-h264
+              intraPeriod: 50
+              bitrate: 5000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 1920
+            height: 1080
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 5000000
+            frameRate:
+              frames: 25
+              seconds: 1
+          ma35d:
+            width: 1920
+            height: 1080
+            codec:
+              type: amdMA35D-hevc
+              profile: main
+              rateControl:
+                mode: cbr
+                bitrate: 10000
+              gopSize: 50
+            frameRate:
+              frames: 25
+              seconds: 1
         - name: h264_1280x720
           software:
             width: 1280
@@ -237,101 +302,17 @@ components:
             frameRate:
               frames: 25
               seconds: 1
+      notes: ""
       id: abr_ladder
     subscriptions:
       - source: browser_overlay
         streams:
           type: take-first-stream
-          select:
-            - video
-  - type: output.preview
-    config:
-      displayName: Camera2 Preview
-      bufferDelayMs: 500
-      id: camera2_preview
-    subscriptions:
-      - source: srt_sources
-        streams:
-          type: take-specific-stream
-          select:
-            - audio
-            - video
-          filter: camera2
-  - type: output.preview
-    config:
-      displayName: Live Camera
-      bufferDelayMs: 500
-      id: live_camera
-    subscriptions:
-      - source: source_switcher
-        streams:
-          type: take-first-stream
-          select:
-            - video
-            - audio
-  - type: processor.browserOverlay
-    config:
-      displayName: Browser Overlay
-      url: https://app.singular.live/output/6CTPhPRe7yc5lkxgUixA5q/Default?aspect=9:5
-      id: browser_overlay
-    subscriptions:
-      - source: on_screen_graphic
-        streams:
-          type: take-first-stream
-          select:
-            - video
-  - type: processor.sourceSwitcher
-    config:
-      displayName: Source Switcher
-      resolution:
-        width: 1280
-        height: 720
-      frameRate:
-        frames: 25
-        seconds: 1
-      sampleRate: 48000
-      channelLayout: stereo
-      id: source_switcher
-    subscriptions:
-      - source: srt_sources
-        streams:
-          type: take-specific-streams
-          select:
-            - video
-            - audio
           filter:
-            - camera1
-            - camera2
-  - type: processor.onscreenGraphic
-    config:
-      displayName: On Screen Graphic
-      initialGraphic: Norsk.png
-      initialPosition:
-        type: named
-        position: topleft
-      id: on_screen_graphic
-    subscriptions:
-      - source: source_switcher
-        streams:
-          type: take-first-stream
-          select:
-            - video
-  - type: input.srt-listener
-    config:
-      displayName: SRT Sources
-      port: 5001
-      host: 0.0.0.0
-      passphrase: ""
-      socketOptions: {}
-      sourceNames: strict
-      streamIds:
-        - camera1
-        - camera2
-      id: srt_sources
-    subscriptions: []
+            - media: video
   - type: output.autoCmaf
     config:
-      displayName: HLS and DASH
+      displayName: LL-HLS
       name: default
       sessionId: false
       segments:
@@ -339,20 +320,120 @@ components:
         defaultSegmentCount: 0
         targetSegmentDuration: 4
         targetPartDuration: 1
-      s3Destinations: []
-      id: hls_and_dash
+      destinations: []
+      initialState: enabled
+      multiplePrograms: false
+      notes: ""
+      id: ll-hls
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          filter:
+            - media: audio
+  - type: processor.sourceSwitcher
+    config:
+      displayName: Source Switcher
+      enablePreviews: true
+      resolution:
+        width: 1920
+        height: 1080
+      frameRate:
+        frames: 25
+        seconds: 1
+      sampleRate: 48000
+      channelLayout: stereo
+      notes: ""
+      id: source_switcher
+    subscriptions:
+      - source: srt_input
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+            - media: audio
+  - type: processor.onscreenGraphic
+    config:
+      displayName: On Screen Graphic
+      initialGraphic: Norsk.png
+      initialPosition:
+        type: named
+        position: topleft
+      notes: ""
+      id: on_screen_graphic
     subscriptions:
       - source: source_switcher
         streams:
           type: take-first-stream
-          select:
-            - audio
-      - source: abr_ladder
+          filter:
+            - media: video
+  - type: processor.browserOverlay
+    config:
+      displayName: Browser Overlay
+      url: https://app.singular.live/output/6CTPhPRe7yc5lkxgUixA5q/Default?aspect=9:5
+      notes: ""
+      id: browser_overlay
+    subscriptions:
+      - source: on_screen_graphic
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: output.preview
+    config:
+      displayName: Camera One
+      previewMode: image
+      showPreview: true
+      bufferDelayMs: 500
+      notes: ""
+      id: camera_one
+    subscriptions:
+      - source: srt_input
         streams:
           type: take-specific-streams
-          select:
-            - video
           filter:
-            - h264_1280x720
-            - h264_640x360
-            - h264_320x180
+            - media: video
+              sourceName: camera1
+            - media: audio
+              sourceName: camera1
+  - type: output.preview
+    config:
+      displayName: Camera Two
+      previewMode: image
+      showPreview: true
+      bufferDelayMs: 500
+      notes: ""
+      id: camera_two
+    subscriptions:
+      - source: srt_input
+        streams:
+          type: take-specific-streams
+          filter:
+            - media: video
+              sourceName: camera2
+            - media: audio
+              sourceName: camera2
+  - type: output.preview
+    config:
+      displayName: Output Preview
+      previewMode: image
+      showPreview: true
+      bufferDelayMs: 500
+      notes: ""
+      id: output_preview
+    subscriptions:
+      - source: browser_overlay
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+      - source: source_switcher
+        streams:
+          type: take-first-stream
+          filter:
+            - media: audio

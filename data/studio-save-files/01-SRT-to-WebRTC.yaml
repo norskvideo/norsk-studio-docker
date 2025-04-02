@@ -1,10 +1,10 @@
 __layout:
   - id: srt_source
-    x: 592
-    y: 544
+    x: 992
+    y: 368
   - id: webrtc_output
-    x: 1232
-    y: 544
+    x: 1632
+    y: 368
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -17,18 +17,20 @@ components:
       sourceNames: permissive
       streamIds:
         - camera1
+      notes: ""
       id: srt_source
     subscriptions: []
   - type: output.whep
     config:
       displayName: WebRTC Output
       bufferDelayMs: 500
+      showPreview: true
+      notes: ""
       id: webrtc_output
     subscriptions:
       - source: srt_source
         streams:
-          type: take-specific-stream
-          select:
-            - video
-            - audio
-          filter: camera1
+          type: take-first-stream
+          filter:
+            - media: video
+            - media: audio
