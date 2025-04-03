@@ -27,9 +27,9 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils
 
 sudo mkdir -p /var/norsk-studio
 cd /var/norsk-studio
-git clone -b deployed-as-id3as https://github.com/norskvideo/norsk-studio-starter-kit.git
+git clone -b deployed https://github.com/norskvideo/norsk-studio-docker.git
 
-cd /var/norsk-studio/norsk-studio-starter-kit
+cd /var/norsk-studio/norsk-studio-docker
 
 # Set secrets and config from UDF
 (set +x; printf '%s\n' "$NORSK_LICENSE") > ./secrets/license.json
@@ -60,4 +60,4 @@ docker pull xmartlabs/htpasswd@sha256:fac862e543f80d72386492aa87b0f6f3c1c06a49a8
 
 # Install and start the systemd units (norsk-setup, norsk, and nginx)
 # Ubuntu: wants absolute paths
-sudo systemctl enable --now /var/norsk-studio/norsk-studio-starter-kit/deployed/systemd/*.service
+sudo systemctl enable --now /var/norsk-studio/norsk-studio-docker/deployed/systemd/*.service

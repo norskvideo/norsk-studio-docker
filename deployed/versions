@@ -1,0 +1,4 @@
+export NORSK_MEDIA_IMAGE=${NORSK_MEDIA_IMAGE:-norskvideo/norsk:1.0.401-2025-04-02-313767ee}
+export NORSK_STUDIO_IMAGE=${NORSK_STUDIO_IMAGE:-norskvideo/norsk-studio:1.0.401-2025-04-02-313767ee}
+export NGINX_VERSION=1.27.4-alpine-slim
+export OAUTH2_PROXY_VERSION=v7.8.2

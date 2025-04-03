@@ -1,0 +1,25 @@
+services:
+  nginx-proxy:
+    image: nginx:${NGINX_VERSION:-latest}
+    container_name: nginx-proxy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./${AUTH_METHOD:-no-auth}/nginx:/mnt/nginx-auth
+      - ./extras/:/mnt/nginx-extras
+    secrets:
+      - nginx.ec.crt
+      - nginx.ec.key
+      - .htpasswd
+
+secrets:
+  nginx.ec.crt:
+    file: ./certs/nginx.ec.crt
+  nginx.ec.key:
+    file: ./certs/nginx.ec.key
+  .htpasswd:
+    file: ./${AUTH_METHOD:-no-auth}/secrets/.htpasswd
