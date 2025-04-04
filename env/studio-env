@@ -36,7 +36,7 @@ GLOBAL_ICE_SERVERS=${GLOBAL_ICE_SERVERS:-}
 # Media URLs that Studio publishes will start with the below
 PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-http://127.0.0.1:8080}
 # A URL to Studio itself
-STUDIO_URL_PREFIX=${PUBLIC_URL_PREFIX:-}
+STUDIO_URL_PREFIX=${STUDIO_URL_PREFIX:-}
 # A URL to docs (defaults )
 STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-}
 
