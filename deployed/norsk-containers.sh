@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.." || exit 1
 
 export PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-https://$DEPLOY_HOSTNAME/norsk}
 export STUDIO_URL_PREFIX=${STUDIO_URL_PREFIX:-/studio}
-export STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-https://$DEPLOY_HOSTNAME/docs/studio/index.html}
+export STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-https://$DEPLOY_HOSTNAME/docs/studio/latest/index.html}
 # These need to be set as ids because they are
 # names on the host system, not inside the container
 export NORSK_USER=$(id -u norsk)
