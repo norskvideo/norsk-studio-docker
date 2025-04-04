@@ -27,9 +27,9 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils
 
 sudo mkdir -p /var/norsk-studio
 cd /var/norsk-studio
-git clone -b deployed-as-id3as https://github.com/norskvideo/norsk-studio-starter-kit.git
+git clone -b deployed https://github.com/norskvideo/norsk-studio-docker.git
 
-cd /var/norsk-studio/norsk-studio-starter-kit
+cd /var/norsk-studio/norsk-studio-docker
 
 # Set secrets and config from UDF
 (set +x; printf '%s\n' "$NORSK_LICENSE") > ./secrets/license.json
@@ -87,13 +87,13 @@ fi
 # Give the norsk user access to the hardware
 sudo usermod -aG disk norsk
 # Configure Norsk with access
-echo 'export DEPLOY_HARDWARE="yml/hardware-devices/quadra.yaml"' >> /var/norsk-studio/norsk-studio-starter-kit/deployed/Linode/norsk-config.sh
+echo 'export DEPLOY_HARDWARE="yaml/hardware-devices/quadra.yaml"' >> /var/norsk-studio/norsk-studio-docker/deployed/Linode/norsk-config.sh
 
 # Initialize Netint Quadra support via libxcoder
 # (right now and at every boot, runs as user norsk)
-sudo systemctl enable --now /var/norsk-studio/norsk-studio-starter-kit/deployed/Linode/nilibxcoder.service
+sudo systemctl enable --now /var/norsk-studio/norsk-studio-docker/deployed/Linode/nilibxcoder.service
 
 
 # Install and start the systemd units (norsk-setup, norsk, and nginx)
 # Ubuntu: wants absolute paths
-sudo systemctl enable --now /var/norsk-studio/norsk-studio-starter-kit/deployed/systemd/*.service
+sudo systemctl enable --now /var/norsk-studio/norsk-studio-docker/deployed/systemd/*.service
