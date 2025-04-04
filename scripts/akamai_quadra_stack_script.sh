@@ -87,7 +87,7 @@ fi
 # Give the norsk user access to the hardware
 sudo usermod -aG disk norsk
 # Configure Norsk with access
-echo 'export DEPLOY_HARDWARE="yml/hardware-devices/quadra.yaml"' >> /var/norsk-studio/norsk-studio-docker/deployed/Linode/norsk-config.sh
+echo 'export DEPLOY_HARDWARE="yaml/hardware-devices/quadra.yaml"' >> /var/norsk-studio/norsk-studio-docker/deployed/Linode/norsk-config.sh
 
 # Initialize Netint Quadra support via libxcoder
 # (right now and at every boot, runs as user norsk)
