@@ -79,7 +79,7 @@ set -eo pipefail
 
     targetDirname="norsk-studio"
     releaseVersion="1.0.401-2025-04-05-fe87a679"
-    releaseHash="d185e9ac8971ffb8ff14060d45384e5a74c2b5842f21bae7c4b967183ae84c0a"
+    releaseHash="651540d36129dd8e9b75994b2dde169f5bb1b9b0f0df9796bc60100089c164e5"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
 
     tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
