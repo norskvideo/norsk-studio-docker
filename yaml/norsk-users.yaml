@@ -1,0 +1,5 @@
+services:
+  norsk-media:
+    user: $NORSK_USER:$NORSK_GROUP
+  norsk-studio:
+    user: $NORSK_USER:$NORSK_GROUP

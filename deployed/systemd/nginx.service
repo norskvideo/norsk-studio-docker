@@ -1,0 +1,14 @@
+[Unit]
+Description=Nginx proxy for Norsk
+After=network.target
+After=norsk-setup.service
+
+[Service]
+User=root
+WorkingDirectory=/var/norsk-studio/norsk-studio-docker
+ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh up --abort-on-container-exit
+ExecStop=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh down
+ExecReload=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh exec nginx nginx -s reload
+
+[Install]
+WantedBy=multi-user.target

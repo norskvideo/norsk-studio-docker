@@ -1,4 +1,4 @@
 services:
   norsk-media:
     devices:
-    - /dev/nvme0n1
+      - ${QUADRA_DEVICE:-/dev/nvme0n1} # NETINT Quadra

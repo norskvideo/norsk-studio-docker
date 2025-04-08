@@ -75,16 +75,6 @@ components:
             frameRate:
               frames: 25
               seconds: 1
-          logan:
-            width: 1920
-            height: 1080
-            codec:
-              type: logan-h264
-              intraPeriod: 50
-              bitrate: 5000000
-            frameRate:
-              frames: 25
-              seconds: 1
           nvidia:
             width: 1920
             height: 1080
@@ -94,19 +84,6 @@ components:
               rateControl:
                 mode: vbr
                 averageBitrate: 5000000
-            frameRate:
-              frames: 25
-              seconds: 1
-          ma35d:
-            width: 1920
-            height: 1080
-            codec:
-              type: amdMA35D-hevc
-              profile: main
-              rateControl:
-                mode: cbr
-                bitrate: 10000
-              gopSize: 50
             frameRate:
               frames: 25
               seconds: 1
@@ -139,16 +116,6 @@ components:
             frameRate:
               frames: 25
               seconds: 1
-          logan:
-            width: 1280
-            height: 720
-            codec:
-              type: logan-h264
-              intraPeriod: 50
-              bitrate: 2500000
-            frameRate:
-              frames: 25
-              seconds: 1
           nvidia:
             width: 1280
             height: 720
@@ -158,19 +125,6 @@ components:
               rateControl:
                 mode: vbr
                 averageBitrate: 2500000
-            frameRate:
-              frames: 25
-              seconds: 1
-          ma35d:
-            width: 1280
-            height: 720
-            codec:
-              type: amdMA35D-h264
-              profile: main
-              rateControl:
-                mode: cbr
-                bitrate: 5000
-              gopSize: 50
             frameRate:
               frames: 25
               seconds: 1
@@ -203,16 +157,6 @@ components:
             frameRate:
               frames: 25
               seconds: 1
-          logan:
-            width: 640
-            height: 360
-            codec:
-              type: logan-h264
-              intraPeriod: 50
-              bitrate: 1000000
-            frameRate:
-              frames: 25
-              seconds: 1
           nvidia:
             width: 640
             height: 360
@@ -222,19 +166,6 @@ components:
               rateControl:
                 mode: vbr
                 averageBitrate: 1000000
-            frameRate:
-              frames: 25
-              seconds: 1
-          ma35d:
-            width: 640
-            height: 360
-            codec:
-              type: amdMA35D-h264
-              profile: main
-              rateControl:
-                mode: cbr
-                bitrate: 2000
-              gopSize: 50
             frameRate:
               frames: 25
               seconds: 1
@@ -267,16 +198,6 @@ components:
             frameRate:
               frames: 25
               seconds: 1
-          logan:
-            width: 320
-            height: 180
-            codec:
-              type: logan-h264
-              intraPeriod: 50
-              bitrate: 800000
-            frameRate:
-              frames: 25
-              seconds: 1
           nvidia:
             width: 320
             height: 180
@@ -286,19 +207,6 @@ components:
               rateControl:
                 mode: vbr
                 averageBitrate: 800000
-            frameRate:
-              frames: 25
-              seconds: 1
-          ma35d:
-            width: 320
-            height: 180
-            codec:
-              type: amdMA35D-h264
-              profile: main
-              rateControl:
-                mode: cbr
-                bitrate: 1000
-              gopSize: 50
             frameRate:
               frames: 25
               seconds: 1

@@ -1,0 +1,47 @@
+# Example configuration for oauth2-proxy on ${DEPLOY_HOSTNAME}, with only a .htpasswd file
+
+# Communication with nginx
+http_address="0.0.0.0:4180"
+# Tells oauth2-proxy to trust the `X-Real-IP` and `X-Forwarded-*` headers passed by nginx
+reverse_proxy="true"
+
+custom_sign_in_logo="https://${DEPLOY_HOSTNAME}/studio/static/Norsk-Logo-Light-Background.svg"
+footer="-"
+
+# Cookie configuration, including domain name
+redirect_url="https://${DEPLOY_HOSTNAME}/oauth2/callback"
+## Cookie Settings
+## Name     - the cookie name
+## Secret   - the seed string for secure cookies; should be 16, 24, or 32 bytes
+##            for use with an AES cipher when cookie_refresh or pass_access_token
+##            is set
+## Domain   - (optional) cookie domain to force cookies to (ie: .yourcompany.com)
+## Expire   - (duration) expire timeframe for cookie
+## Refresh  - (duration) refresh the cookie when duration has elapsed after cookie was initially set.
+##            Should be less than cookie_expire; set to 0 to disable.
+##            On refresh, OAuth token is re-validated.
+##            (ie: 1h means tokens are refreshed on request 1hr+ after it was set)
+## Secure   - secure cookies are only sent by the browser of a HTTPS connection (recommended)
+## HttpOnly - httponly cookies are not readable by javascript (recommended)
+cookie_domains="" # Must be blank when using the `__Host-` prefix
+whitelist_domains="${DEPLOY_HOSTNAME}"
+cookie_name="__Host-norsk_studio_oauth2"
+cookie_secret="${COOKIE_SECRET}" # openssl rand -base64 32 | tr -- '+/' '-_'
+cookie_secure="true"
+cookie_samesite="strict"
+cookie_httponly="true"
+
+# Start with a .htpasswd file, or configure a custom provider later
+htpasswd_file="/run/secrets/.htpasswd"
+
+# This is a fake OIDC provider that does nothing
+provider="oidc"
+provider_display_name="Username + Password:"
+login_url="/studio" # This forces users back to `/studio/` via `/studio`
+                    # so that the nginx redirect clears the query
+oidc_issuer_url="/no-oidc"
+redeem_url="/no-oidc/redeem"
+oidc_jwks_url="/no-oidc/jwks"
+client_id="norsk-studio-oauth2"
+client_secret="proxy"
+skip_oidc_discovery="true"

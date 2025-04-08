@@ -1,0 +1,8 @@
+services:
+  nginx-proxy:
+    volumes:
+      - ${DEPLOY_LOGS}/nginx-proxy:/var/log/nginx
+  oauth2-proxy:
+    command: --config /run/secrets/oauth2-proxy.cfg --logging-filename=/home/nonroot/logs/combined.log
+    volumes:
+      - ${DEPLOY_LOGS}/oauth2-proxy:/home/nonroot/logs
