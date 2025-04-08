@@ -26,6 +26,9 @@ main() {
     # Do a dry run of the compose command to make sure that the installed version is compatible with our YAML
     "$unpackDir/up.sh" --merge /dev/null  > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
     rm -rf "$unpackDir/scripts"
+    rm -rf "$unpackDir/support"
+    rm -rf "$unpackDir/deployed"
+
     mv "$unpackDir"/* "$targetDirname"
 
     # Check which containers up.sh expects and pull them
