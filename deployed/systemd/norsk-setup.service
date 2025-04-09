@@ -1,0 +1,13 @@
+[Unit]
+Description=Norsk cloud auto-configuration
+After=network.target
+
+[Service]
+User=root
+# oneshot runs once on startup and reboot
+Type=oneshot
+WorkingDirectory=/var/norsk-studio/norsk-studio-docker
+ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/setup.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -2,8 +2,8 @@
 set -eo pipefail
 cd "${0%/*}"
 
-export NORSK_MEDIA_IMAGE=norskvideo/norsk:v1.0.400-main
-export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:v1.0.400
+export NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.401-2025-04-05-fe87a679
+export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.401-2025-04-05-fe87a679
 
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
