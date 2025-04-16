@@ -1,4 +1,4 @@
 export NORSK_MEDIA_IMAGE=${NORSK_MEDIA_IMAGE:-norskvideo/norsk:v1.0.401-main}
-export NORSK_STUDIO_IMAGE=${NORSK_STUDIO_IMAGE:-norskvideo/norsk-studio:v1.0.401-amd64}
+export NORSK_STUDIO_IMAGE=${NORSK_STUDIO_IMAGE:-norskvideo/norsk-studio:v1.0.401}
 export NGINX_VERSION=1.27.4-alpine-slim
 export OAUTH2_PROXY_VERSION=v7.8.2

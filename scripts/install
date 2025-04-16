@@ -78,7 +78,7 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="v1.0.387"
+    releaseVersion="v1.0.401"
     releaseHash="915c3916fc9183f4ddb0b876f89d1bc2ff7726b08de271ff9ff55ec510e61929"
     releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
 
