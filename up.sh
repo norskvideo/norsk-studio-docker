@@ -184,9 +184,9 @@ main() {
     if [[ $localTurn == "true" ]]; then
         turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
         if [[ "$networkMode" == "host" ]]; then
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         else
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         fi
         envVars+="GLOBAL_ICE_SERVERS"
     fi
