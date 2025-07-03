@@ -1,0 +1,309 @@
+__layout:
+  - id: srt_input
+    x: 672
+    y: 416
+  - id: abrladder
+    x: 1280
+    y: 112
+  - id: ll-hls
+    x: 1840
+    y: 416
+__globalConfig: {}
+components:
+  - type: input.srt-listener
+    config:
+      displayName: SRT Input
+      port: 5001
+      host: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: permissive
+      streamIds:
+        - camera1
+      notes: ""
+      id: srt_input
+    subscriptions: []
+  - type: processor.fixedLadder
+    config:
+      displayName: ABR Ladder
+      rungs:
+        - name: h264_1920x1080
+          software:
+            width: 1920
+            height: 1080
+            codec:
+              type: x264
+              bitrateMode:
+                value: 4100
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 8
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 1920
+            height: 1080
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 4100000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 1920
+            height: 1080
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 4100000
+            frameRate:
+              frames: 30
+              seconds: 1
+        - name: h264_1280x720
+          software:
+            width: 1280
+            height: 720
+            codec:
+              type: x264
+              bitrateMode:
+                value: 2700
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 4
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 1280
+            height: 720
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 2700000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 1280
+            height: 720
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 2700000
+            frameRate:
+              frames: 30
+              seconds: 1
+        - name: h264_960x540
+          software:
+            width: 960
+            height: 540
+            codec:
+              type: x264
+              bitrateMode:
+                value: 1800
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 960
+            height: 540
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 1800000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 960
+            height: 540
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 1800000
+              frameRate:
+                frames: 30
+                seconds: 1
+        - name: h264_768x432
+          software:
+            width: 768
+            height: 432
+            codec:
+              type: x264
+              bitrateMode:
+                value: 1200
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 768
+            height: 432
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 1200000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 768
+            height: 432
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 1200000
+            frameRate:
+              frames: 30
+              seconds: 1
+        - name: h264_640x360
+          software:
+            width: 640
+            height: 360
+            codec:
+              type: x264
+              bitrateMode:
+                value: 800
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 640
+            height: 360
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 800000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 640
+            height: 360
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 800000
+            frameRate:
+              frames: 30
+              seconds: 1
+        - name: h264_512x288
+          software:
+            width: 512
+            height: 288
+            codec:
+              type: x264
+              bitrateMode:
+                value: 400
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 1
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 512
+            height: 288
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 400000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 512
+            height: 288
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 400000
+            frameRate:
+              frames: 30
+              seconds: 1
+      notes: ""
+      id: abrladder
+    subscriptions:
+      - source: srt_input
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: output.autoCmaf
+    config:
+      displayName: LL-HLS
+      name: default
+      sessionId: false
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+      destinations: []
+      initialState: enabled
+      multiplePrograms: false
+      notes: ""
+      id: ll-hls
+    subscriptions:
+      - source: abrladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: srt_input
+        streams:
+          type: take-all-streams
+          filter:
+            - media: audio
