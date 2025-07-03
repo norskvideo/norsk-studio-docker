@@ -6,7 +6,7 @@ SOURCES_DIR=$(readlink -f ./sources)
 
 
 usage() {
-    echo "Usage: ${0##*/} <camera1|camera2> <start|stop>"
+    echo "Usage: ${0##*/} <camera1|camera2|camera3> <start|stop>"
     echo "  Start a sample SRT source that sends a stream to camera 1 or camera 2 on port 5001"
 }
 
@@ -33,6 +33,9 @@ main() {
         ;;
         camera2)
             source="Weaving.ts"
+        ;;
+        camera3)
+            source="Tears-of-steel.mp4"
         ;;
         *)
             usage
