@@ -232,7 +232,7 @@ components:
             frameRate:
               frames: 30
               seconds: 1
-        - name: h264_768x432
+        - name: h264_768x432_1100kbps
           software:
             width: 768
             height: 432
@@ -273,6 +273,47 @@ components:
             frameRate:
               frames: 30
               seconds: 1
+        - name: h264_768x432_730kbps
+          software:
+            width: 768
+            height: 432
+            codec:
+              type: x264
+              bitrateMode:
+                value: 730
+                mode: abr
+              keyFrameIntervalMax: 60
+              keyFrameIntervalMin: 60
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+            frameRate:
+              frames: 30
+              seconds: 1
+          quadra:
+            width: 768
+            height: 432
+            codec:
+              type: quadra-h264
+              intraPeriod: 60
+              bitrate: 730000
+            frameRate:
+              frames: 30
+              seconds: 1
+          nvidia:
+            width: 768
+            height: 432
+            codec:
+              type: nv-h264
+              idrPeriod: 60
+              rateControl:
+                mode: vbr
+                averageBitrate: 730000
+            frameRate:
+              frames: 30
+              seconds: 1
         - name: h264_640x360
           software:
             width: 640
@@ -280,7 +321,7 @@ components:
             codec:
               type: x264
               bitrateMode:
-                value: 730
+                value: 365
                 mode: abr
               keyFrameIntervalMax: 60
               keyFrameIntervalMin: 60
@@ -298,54 +339,13 @@ components:
             codec:
               type: quadra-h264
               intraPeriod: 60
-              bitrate: 730000
+              bitrate: 365000
             frameRate:
               frames: 30
               seconds: 1
           nvidia:
             width: 640
             height: 360
-            codec:
-              type: nv-h264
-              idrPeriod: 60
-              rateControl:
-                mode: vbr
-                averageBitrate: 730000
-            frameRate:
-              frames: 30
-              seconds: 1
-        - name: h264_480x270
-          software:
-            width: 480
-            height: 270
-            codec:
-              type: x264
-              bitrateMode:
-                value: 365
-                mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
-              sceneCut: 0
-              preset: fast
-              tune: zerolatency
-              threads: 1
-              bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 480
-            height: 270
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 365000
-            frameRate:
-              frames: 30
-              seconds: 1
-          nvidia:
-            width: 480
-            height: 270
             codec:
               type: nv-h264
               idrPeriod: 60
