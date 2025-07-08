@@ -109,10 +109,10 @@ components:
             frameRate:
               frames: 30
               seconds: 1
-        - name: h264_1920x1080_4500kbps
+        - name: h264_1280x720_4500kbps
           software:
-            width: 1920
-            height: 1080
+            width: 1280
+            height: 720
             codec:
               type: x264
               bitrateMode:
@@ -129,8 +129,8 @@ components:
               frames: 30
               seconds: 1
           quadra:
-            width: 1920
-            height: 1080
+            width: 1280
+            height: 720
             codec:
               type: quadra-h264
               intraPeriod: 60
@@ -139,8 +139,8 @@ components:
               frames: 30
               seconds: 1
           nvidia:
-            width: 1920
-            height: 1080
+            width: 1280
+            height: 720
             codec:
               type: nv-h264
               idrPeriod: 60
@@ -150,7 +150,7 @@ components:
             frameRate:
               frames: 30
               seconds: 1
-        - name: h264_1280x720
+        - name: h264_1280x720_3000kbps
           software:
             width: 1280
             height: 720
