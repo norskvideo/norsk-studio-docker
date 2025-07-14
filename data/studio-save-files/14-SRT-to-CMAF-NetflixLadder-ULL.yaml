@@ -1,13 +1,13 @@
 __layout:
   - id: srt_input
     x: 672
-    y: 416
+    'y': 416
   - id: abrladder
     x: 1280
-    y: 112
+    'y': 112
   - id: ll-hls
     x: 1840
-    y: 416
+    'y': 416
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -15,12 +15,12 @@ components:
       displayName: SRT Input
       port: 5001
       host: 0.0.0.0
-      passphrase: ""
+      passphrase: ''
       socketOptions: {}
       sourceNames: permissive
       streamIds:
         - camera1
-      notes: ""
+      notes: ''
       id: srt_input
     subscriptions: []
   - type: processor.fixedLadder
@@ -36,24 +36,14 @@ components:
               bitrateMode:
                 value: 5800
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 8
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 1920
-            height: 1080
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 5800000
-            frameRate:
+            frameRate: &ref_0
               frames: 30
               seconds: 1
           nvidia:
@@ -61,13 +51,27 @@ components:
             height: 1080
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 5800000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_0
+          quadra:
+            width: 1920
+            height: 1080
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 5800000
+              extraOpts: lowDelay=1
+            frameRate: *ref_0
         - name: h264_1920x1080_4300kbps
           software:
             width: 1920
@@ -77,24 +81,14 @@ components:
               bitrateMode:
                 value: 4300
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 8
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 1920
-            height: 1080
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 4300000
-            frameRate:
+            frameRate: &ref_1
               frames: 30
               seconds: 1
           nvidia:
@@ -102,13 +96,27 @@ components:
             height: 1080
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 4300000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_1
+          quadra:
+            width: 1920
+            height: 1080
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 4300000
+              extraOpts: lowDelay=1
+            frameRate: *ref_1
         - name: h264_1280x720_3000kbps
           software:
             width: 1280
@@ -118,24 +126,14 @@ components:
               bitrateMode:
                 value: 3000
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 4
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 1280
-            height: 720
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 3000000
-            frameRate:
+            frameRate: &ref_2
               frames: 30
               seconds: 1
           nvidia:
@@ -143,13 +141,27 @@ components:
             height: 720
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 3000000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_2
+          quadra:
+            width: 1280
+            height: 720
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 3000000
+              extraOpts: lowDelay=1
+            frameRate: *ref_2
         - name: h264_1280x720_2350kbps
           software:
             width: 1280
@@ -159,24 +171,14 @@ components:
               bitrateMode:
                 value: 2350
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 4
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 1280
-            height: 720
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 2350000
-            frameRate:
+            frameRate: &ref_3
               frames: 30
               seconds: 1
           nvidia:
@@ -184,13 +186,27 @@ components:
             height: 720
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 2350000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_3
+          quadra:
+            width: 1280
+            height: 720
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 2350000
+              extraOpts: lowDelay=1
+            frameRate: *ref_3
         - name: h264_720x480
           software:
             width: 720
@@ -200,24 +216,14 @@ components:
               bitrateMode:
                 value: 1750
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
-              threads: 2
+              threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 720
-            height: 480
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 1750000
-            frameRate:
+            frameRate: &ref_4
               frames: 30
               seconds: 1
           nvidia:
@@ -225,13 +231,27 @@ components:
             height: 480
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 1750000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_4
+          quadra:
+            width: 720
+            height: 480
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 1750000
+              extraOpts: lowDelay=1
+            frameRate: *ref_4
         - name: h264_640x480
           software:
             width: 640
@@ -241,24 +261,14 @@ components:
               bitrateMode:
                 value: 1050
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
-              threads: 2
+              threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 640
-            height: 480
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 1050000
-            frameRate:
+            frameRate: &ref_5
               frames: 30
               seconds: 1
           nvidia:
@@ -266,13 +276,27 @@ components:
             height: 480
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 1050000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_5
+          quadra:
+            width: 640
+            height: 480
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 1050000
+              extraOpts: lowDelay=1
+            frameRate: *ref_5
         - name: h264_512x384_750kbps
           software:
             width: 512
@@ -282,24 +306,14 @@ components:
               bitrateMode:
                 value: 750
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
-              threads: 2
+              threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 512
-            height: 384
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 750000
-            frameRate:
+            frameRate: &ref_6
               frames: 30
               seconds: 1
           nvidia:
@@ -307,13 +321,27 @@ components:
             height: 384
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 750000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_6
+          quadra:
+            width: 512
+            height: 384
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 750000
+              extraOpts: lowDelay=1
+            frameRate: *ref_6
         - name: h264_512x384_560kbps
           software:
             width: 512
@@ -323,24 +351,14 @@ components:
               bitrateMode:
                 value: 560
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
-              threads: 2
+              threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 512
-            height: 384
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 560000
-            frameRate:
+            frameRate: &ref_7
               frames: 30
               seconds: 1
           nvidia:
@@ -348,13 +366,27 @@ components:
             height: 384
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 560000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_7
+          quadra:
+            width: 512
+            height: 384
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 560000
+              extraOpts: lowDelay=1
+            frameRate: *ref_7
         - name: h264_384x288
           software:
             width: 384
@@ -364,24 +396,14 @@ components:
               bitrateMode:
                 value: 375
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 384
-            height: 288
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 375000
-            frameRate:
+            frameRate: &ref_8
               frames: 30
               seconds: 1
           nvidia:
@@ -389,13 +411,27 @@ components:
             height: 288
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 375000
-            frameRate:
-              frames: 30
-              seconds: 1
+              useBFramesAsRef: disabled
+            frameRate: *ref_8
+          quadra:
+            width: 384
+            height: 288
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 375000
+              extraOpts: lowDelay=1
+            frameRate: *ref_8
         - name: h264_320x240
           software:
             width: 320
@@ -405,24 +441,14 @@ components:
               bitrateMode:
                 value: 235
                 mode: abr
-              keyFrameIntervalMax: 60
-              keyFrameIntervalMin: 60
+              keyFrameIntervalMax: 30
+              keyFrameIntervalMin: 30
               sceneCut: 0
               preset: fast
               tune: zerolatency
               threads: 1
               bframes: 0
-            frameRate:
-              frames: 30
-              seconds: 1
-          quadra:
-            width: 320
-            height: 240
-            codec:
-              type: quadra-h264
-              intraPeriod: 60
-              bitrate: 235000
-            frameRate:
+            frameRate: &ref_9
               frames: 30
               seconds: 1
           nvidia:
@@ -430,14 +456,28 @@ components:
             height: 240
             codec:
               type: nv-h264
-              idrPeriod: 60
+              preset: p5
+              tuning: low_latency
+              idrPeriod: 30
+              gopInterval: 30
               rateControl:
-                mode: vbr
+                mode: cbr
                 averageBitrate: 235000
-            frameRate:
-              frames: 30
-              seconds: 1
-      notes: ""
+              useBFramesAsRef: disabled
+            frameRate: *ref_9
+          quadra:
+            width: 320
+            height: 240
+            codec:
+              type: quadra-h264
+              profile: baseline
+              intraPeriod: 30
+              gopPresetIndex: 3
+              rcEnable: true
+              bitrate: 235000
+              extraOpts: lowDelay=1
+            frameRate: *ref_9
+      notes: ''
       id: abrladder
     subscriptions:
       - source: srt_input
@@ -458,7 +498,7 @@ components:
       destinations: []
       initialState: enabled
       multiplePrograms: false
-      notes: ""
+      notes: ''
       id: ll-hls
     subscriptions:
       - source: abrladder
