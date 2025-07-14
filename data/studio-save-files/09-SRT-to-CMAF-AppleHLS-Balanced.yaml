@@ -68,7 +68,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 7800000
             frameRate: *ref_0
         - name: h264_1920x1080_6000kbps
           software:
@@ -111,7 +111,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 6000000
             frameRate: *ref_1
         - name: h264_1280x720_4500kbps
           software:
@@ -154,7 +154,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 4500000
             frameRate: *ref_2
         - name: h264_1280x720_3000kbps
           software:
@@ -197,7 +197,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 3000000
             frameRate: *ref_3
         - name: h264_960x540
           software:
@@ -240,7 +240,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 2000000
             frameRate: *ref_4
         - name: h264_768x432_1100kbps
           software:
@@ -283,7 +283,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 1100000
             frameRate: *ref_5
         - name: h264_768x432_730kbps
           software:
@@ -326,7 +326,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 730000
             frameRate: *ref_6
         - name: h264_640x360
           software:
@@ -369,7 +369,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 365000
             frameRate: *ref_7
         - name: h264_416x234
           software:
@@ -412,7 +412,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 145000
             frameRate: *ref_8
       notes: ''
       id: abrladder

@@ -29,7 +29,7 @@ components:
       rungs:
         - name: h264_1920x1080_7800kbps
           software:
-            width: 1920
+            
             height: 1080
             codec:
               type: x264
@@ -65,7 +65,7 @@ components:
             height: 1080
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -110,7 +110,7 @@ components:
             height: 1080
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -155,7 +155,7 @@ components:
             height: 720
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -200,7 +200,7 @@ components:
             height: 720
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -245,7 +245,7 @@ components:
             height: 540
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -290,7 +290,7 @@ components:
             height: 432
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -335,7 +335,7 @@ components:
             height: 432
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -380,7 +380,7 @@ components:
             height: 360
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true
@@ -425,7 +425,7 @@ components:
             height: 234
             codec:
               type: quadra-h264
-              profile: baseline
+              profile: main
               intraPeriod: 30
               gopPresetIndex: 3
               rcEnable: true

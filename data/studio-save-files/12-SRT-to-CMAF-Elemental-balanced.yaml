@@ -1,4 +1,4 @@
-_layout:
+__layout:
   - id: srt_input
     x: 672
     'y': 416
@@ -62,13 +62,16 @@ components:
           quadra:
             width: 1920
             height: 1080
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 4100000
             frameRate: *ref_0
         - name: h264_1280x720
           software:
@@ -105,13 +108,16 @@ components:
           quadra:
             width: 1280
             height: 720
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 2700000
             frameRate: *ref_1
         - name: h264_960x540
           software:
@@ -148,13 +154,16 @@ components:
           quadra:
             width: 960
             height: 540
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 1800000
             frameRate: *ref_2
         - name: h264_768x432
           software:
@@ -191,13 +200,16 @@ components:
           quadra:
             width: 768
             height: 432
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 1200000
             frameRate: *ref_3
         - name: h264_640x360
           software:
@@ -234,13 +246,16 @@ components:
           quadra:
             width: 640
             height: 360
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 800000
             frameRate: *ref_4
         - name: h264_512x288
           software:
@@ -277,13 +292,16 @@ components:
           quadra:
             width: 512
             height: 288
+            pipelineHints:
+              type: quadra
+              rescaler: default
             codec:
               type: quadra-h264
               profile: main
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 25
+              bitrate: 400000
             frameRate: *ref_5
       notes: ''
       id: abrladder

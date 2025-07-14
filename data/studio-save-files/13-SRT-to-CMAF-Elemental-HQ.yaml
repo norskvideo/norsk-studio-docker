@@ -68,7 +68,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 4100000
             frameRate: *ref_0
         - name: h264_1280x720
           software:
@@ -111,7 +111,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 2700000
             frameRate: *ref_1
         - name: h264_960x540
           software:
@@ -154,7 +154,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 1800000
             frameRate: *ref_2
         - name: h264_768x432
           software:
@@ -197,7 +197,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 1200000
             frameRate: *ref_3
         - name: h264_640x360
           software:
@@ -240,7 +240,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 800000
             frameRate: *ref_4
         - name: h264_512x288
           software:
@@ -283,7 +283,7 @@ components:
               intraPeriod: 60
               gopPresetIndex: 3
               rcEnable: true
-              crf: 20
+              bitrate: 400000
             frameRate: *ref_5
       notes: ''
       id: abrladder
