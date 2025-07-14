@@ -28,8 +28,8 @@ components:
       displayName: ABR Ladder
       rungs:
         - name: h264_1920x1080_7800kbps
-          software:
-            
+          software:  
+            width: 1920 
             height: 1080
             codec:
               type: x264
