@@ -62,9 +62,6 @@ components:
           quadra:
             width: 1920
             height: 1080
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
@@ -108,9 +105,6 @@ components:
           quadra:
             width: 1280
             height: 720
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
@@ -154,9 +148,6 @@ components:
           quadra:
             width: 960
             height: 540
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
@@ -200,9 +191,6 @@ components:
           quadra:
             width: 768
             height: 432
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
@@ -246,9 +234,6 @@ components:
           quadra:
             width: 640
             height: 360
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
@@ -292,9 +277,6 @@ components:
           quadra:
             width: 512
             height: 288
-            pipelineHints:
-              type: quadra
-              rescaler: default
             codec:
               type: quadra-h264
               profile: main
