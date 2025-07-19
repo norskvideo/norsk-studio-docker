@@ -1,6 +1,10 @@
 [Unit]
 Description=Norsk cloud auto-configuration
 After=network.target
+# If running on Google cloud, run any startup scripts first
+After=google-startup-scripts.service
+# If running with cloud-init, wait for that to complete
+After=cloud-final.service
 
 [Service]
 User=root

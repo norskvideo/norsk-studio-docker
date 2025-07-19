@@ -1,6 +1,7 @@
 [Unit]
 Description=Norsk Studio and Norsk Engine
 After=network.target
+After=norsk-setup.service
 
 [Service]
 User=norsk
