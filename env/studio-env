@@ -8,7 +8,7 @@ STUDIO_WORKING_DIRECTORY=${STUDIO_WORKING_DIRECTORY:-/data/}
 #
 # ─data
 # ├── graphics
-# │  └── trinorsk.png
+# │  └── Norsk.png
 # ├── studio-save-files
 # │  ├── OnscreenGraphic.yaml
 # │  ├── SourceSwitcher.yaml
