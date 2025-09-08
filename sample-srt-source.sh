@@ -2,7 +2,8 @@
 set -eo pipefail
 cd "${0%/*}"
 
-SOURCES_DIR=$(readlink -f ./sources)
+mkdir -p ./data/media
+SOURCES_DIR=$(readlink -f ./data/media)
 
 
 if command -v curl > /dev/null 2>&1; then
@@ -10,7 +11,7 @@ if command -v curl > /dev/null 2>&1; then
     elif command -v wget > /dev/null 2>&1; then
     fetch() { wget --quiet "$1" -O "$2"; }
 else
-    oops "you don't have wget or curl installed, which I need to download the binary tarball"
+    oops "you don't have wget or curl installed, which I need to download the file"
 fi
 
 
@@ -38,10 +39,10 @@ main() {
     local source
     case $1 in
         camera1)
-            source="InkDrop.ts"
+            source="action.ts"
         ;;
         camera2)
-            source="Weaving.ts"
+            source="wildlife.ts"
         ;;
         *)
             usage
