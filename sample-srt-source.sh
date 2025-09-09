@@ -39,7 +39,7 @@ main() {
     local source
     case $1 in
         camera1)
-            source="action.ts"
+            source="action.mp4"
         ;;
         camera2)
             source="wildlife.ts"

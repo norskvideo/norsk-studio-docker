@@ -47,7 +47,7 @@ main() {
     echo "Downloading media samples"
     sourcesDir="$targetDirname/data/media"
     mkdir -p "$sourcesDir"
-    for source in action.ts wildlife.ts ; do
+    for source in action.mp4 wildlife.ts ; do
         fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/media/$source" "$sourcesDir/$source"
     done
 

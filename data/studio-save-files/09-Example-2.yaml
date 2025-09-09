@@ -1,0 +1,247 @@
+__layout:
+  - id: srt_source
+    x: 176
+    y: 400
+  - id: abr_ladder
+    x: 640
+    y: 96
+  - id: hlsdash
+    x: 1056
+    y: 496
+__globalConfig: {}
+components:
+  - type: input.srt-listener
+    config:
+      displayName: SRT Source
+      port: 5001
+      host: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: permissive
+      streamIds:
+        - camera1
+      notes: ""
+      id: srt_source
+    subscriptions: []
+  - type: processor.fixedLadder
+    config:
+      displayName: ABR Ladder
+      rungs:
+        - name: h264_1920x1080
+          software:
+            width: 1920
+            height: 1080
+            codec:
+              type: x264
+              bitrateMode:
+                value: 5000
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 8
+              bframes: 0
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 1920
+            height: 1080
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 5000000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 1920
+            height: 1080
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 5000000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+        - name: h264_1280x720
+          software:
+            width: 1280
+            height: 720
+            codec:
+              type: x264
+              bitrateMode:
+                value: 2500
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 4
+              bframes: 0
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 1280
+            height: 720
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 2500000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 1280
+            height: 720
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 2500000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+        - name: h264_640x360
+          software:
+            width: 640
+            height: 360
+            codec:
+              type: x264
+              bitrateMode:
+                value: 1000
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 2
+              bframes: 0
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 640
+            height: 360
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 1000000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 640
+            height: 360
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 1000000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+        - name: h264_320x180
+          software:
+            width: 320
+            height: 180
+            codec:
+              type: x264
+              bitrateMode:
+                value: 800
+                mode: abr
+              keyFrameIntervalMax: 50
+              keyFrameIntervalMin: 50
+              sceneCut: 0
+              preset: fast
+              tune: zerolatency
+              threads: 1
+              bframes: 0
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          quadra:
+            width: 320
+            height: 180
+            codec:
+              type: quadra-h264
+              intraPeriod: 50
+              bitrate: 800000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+          nvidia:
+            width: 320
+            height: 180
+            codec:
+              type: nv-h264
+              idrPeriod: 50
+              rateControl:
+                mode: vbr
+                averageBitrate: 800000
+              level: 3.1
+            frameRate:
+              frames: 25
+              seconds: 1
+      id: abr_ladder
+    subscriptions:
+      - source: srt_source
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: output.autoCmaf
+    config:
+      displayName: HLS/DASH
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      id: hlsdash
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: srt_source
+        streams:
+          type: take-specific-streams
+          filter:
+            - media: audio
+              displayName: camera1 Audio
+              sourceName: camera1
+              programNumber: 1
+              streamId: 257
+              renditionName: default

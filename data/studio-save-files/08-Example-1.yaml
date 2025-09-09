@@ -1,0 +1,48 @@
+__layout:
+  - id: srt_source
+    x: 320
+    y: 224
+  - id: hlsdash
+    x: 1232
+    y: 320
+__globalConfig: {}
+components:
+  - type: input.srt-listener
+    config:
+      displayName: SRT Source
+      port: 5001
+      host: 0.0.0.0
+      passphrase: ""
+      socketOptions: {}
+      sourceNames: permissive
+      streamIds:
+        - camera1
+      notes: ""
+      id: srt_source
+    subscriptions: []
+  - type: output.autoCmaf
+    config:
+      displayName: HLS/DASH
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      id: hlsdash
+    subscriptions:
+      - source: srt_source
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+            - media: audio
