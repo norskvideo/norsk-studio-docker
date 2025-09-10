@@ -1,0 +1,44 @@
+__layout:
+  - id: hlsdash
+    x: 1088
+    y: 384
+  - id: action_mp4_file_input
+    x: 208
+    y: 304
+__globalConfig: {}
+components:
+  - type: output.autoCmaf
+    config:
+      displayName: HLS/DASH
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      id: hlsdash
+    subscriptions:
+      - source: action_mp4_file_input
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+            - media: audio
+  - type: input.file
+    config:
+      displayName: Action MP4 File Input
+      sourceName: file-source
+      notes: ""
+      initialFilename: /data/media/action.mp4
+      initialLoop: false
+      id: action_mp4_file_input
+    subscriptions: []

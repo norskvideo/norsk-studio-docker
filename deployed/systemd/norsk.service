@@ -1,9 +1,11 @@
 [Unit]
 Description=Norsk Studio and Norsk Engine
 After=network.target
+After=norsk-setup.service
 
 [Service]
 User=norsk
+Restart=always
 WorkingDirectory=/var/norsk-studio/norsk-studio-docker
 ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/norsk-containers.sh up --abort-on-container-exit
 ExecStop=/var/norsk-studio/norsk-studio-docker/deployed/norsk-containers.sh down

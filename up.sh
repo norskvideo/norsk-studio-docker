@@ -2,8 +2,8 @@
 set -eo pipefail
 cd "${0%/*}"
 
-export NORSK_MEDIA_IMAGE=norskvideo/norsk:v1.0.401-main
-export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:v1.0.401
+export NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
+export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
 
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
@@ -26,7 +26,6 @@ usage() {
     echo "    --turn [true|false]: launch a local turn server. Defaults to $LOCAL_TURN_DEFAULT on $OSTYPE"
     echo "    --enable-nvidia : enable nvidia access (Linux only)"
     echo "    --enable-quadra : enable quadra access (Linux only)"
-    echo "    --enable-ma35d : enable AMD MA35D access (Linux on x86_64 only)"
     echo "    --merge filename : build a single compose file from your options"
     echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
     echo "  Environment variables:"
@@ -70,7 +69,6 @@ main() {
 
     local localTurn=$LOCAL_TURN_DEFAULT
     local nvidiaSettings=""
-    local ma35dSettings=""
     local quadraSettings=""
     local logSettings=""
     while [[ $# -gt 0 ]]; do
@@ -152,17 +150,6 @@ main() {
                     exit 1
                 fi
             ;;
-            --enable-ma35d)
-                if [[ "$OSTYPE" == "linux"* && "$arch" == "x86_64" ]]; then
-                    ma35dSettings="-f yaml/hardware-devices/ma35d.yaml"
-                    export enableMa35d="--enable-ma35d"
-                    shift 1
-                else
-                    echo "ma35d is only support on linux/x84_64"
-                    usage
-                    exit 1
-                fi
-            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
@@ -184,9 +171,9 @@ main() {
     if [[ $localTurn == "true" ]]; then
         turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
         if [[ "$networkMode" == "host" ]]; then
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         else
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }]'
+            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         fi
         envVars+="GLOBAL_ICE_SERVERS"
     fi
@@ -198,7 +185,7 @@ main() {
 
     ./down.sh
     # The sed is just to remove multiple spaces when options are blank...
-    local cmd=$(echo "docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $ma35dSettings  $quadraSettings $action" | sed 's/  \+/ /g')
+    local cmd=$(echo "docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action" | sed 's/  \+/ /g')
     echo "Launching with:"
     echo "  $cmd"
     local firstTime=true

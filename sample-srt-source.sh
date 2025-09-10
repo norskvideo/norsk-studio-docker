@@ -2,7 +2,17 @@
 set -eo pipefail
 cd "${0%/*}"
 
-SOURCES_DIR=$(readlink -f ./sources)
+mkdir -p ./data/media
+SOURCES_DIR=$(readlink -f ./data/media)
+
+
+if command -v curl > /dev/null 2>&1; then
+    fetch() { curl  --silent --fail -L "$1" -o "$2"; }
+    elif command -v wget > /dev/null 2>&1; then
+    fetch() { wget --quiet "$1" -O "$2"; }
+else
+    oops "you don't have wget or curl installed, which I need to download the file"
+fi
 
 
 usage() {
@@ -16,7 +26,7 @@ function downloadMediaAsset() {
     local -r target="$SOURCES_DIR/$fileName"
     if [[ ! -f $target ]]; then
         echo "Downloading sample file $target"
-        wget -O "$target.download" "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$fileName"
+        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$fileName" "$target.download"
         mv "$target.download" "$target"
     fi
 }
@@ -29,10 +39,10 @@ main() {
     local source
     case $1 in
         camera1)
-            source="InkDrop.ts"
+            source="action.mp4"
         ;;
         camera2)
-            source="Weaving.ts"
+            source="wildlife.ts"
         ;;
         *)
             usage

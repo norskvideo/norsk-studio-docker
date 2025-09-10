@@ -1,6 +1,6 @@
 services:
   norsk-turn:
     container_name: norsk-turn
-    image: coturn/coturn
+    image: coturn/coturn:${COTURN_VERSION:-latest}
     volumes:
       - ./config/turnserver.conf:/etc/coturn/turnserver.conf:ro

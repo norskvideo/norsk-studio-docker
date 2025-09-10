@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/norsk-config.sh"
+source "$(dirname "$0")/versions"
 cd "$(dirname "$0")/../support" || exit 1
 
 if [[ "${1:-}" = "up" || "${1:-}" = "start" ]]; then

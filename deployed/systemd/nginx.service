@@ -5,6 +5,7 @@ After=norsk-setup.service
 
 [Service]
 User=root
+Restart=always
 WorkingDirectory=/var/norsk-studio/norsk-studio-docker
 ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh up --abort-on-container-exit
 ExecStop=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh down
