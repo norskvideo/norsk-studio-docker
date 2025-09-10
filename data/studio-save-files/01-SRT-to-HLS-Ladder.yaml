@@ -5,7 +5,7 @@ __layout:
   - id: abr_ladder
     x: 1248
     y: 32
-  - id: ll-hls
+  - id: hlsdash
     x: 1840
     y: 496
 __globalConfig: {}
@@ -159,19 +159,23 @@ components:
             - media: video
   - type: output.autoCmaf
     config:
-      displayName: LL-HLS
+      displayName: HLS/DASH
       name: default
       sessionId: false
+      allowPreview: true
       segments:
         retentionPeriod: 60
         defaultSegmentCount: 0
         targetSegmentDuration: 4
         targetPartDuration: 1
+        integralSegmentDuration: true
       destinations: []
+      pushMode: hls_dash
       initialState: enabled
       multiplePrograms: false
+      discontinuityHandling: discontinuity
       notes: ""
-      id: ll-hls
+      id: hlsdash
     subscriptions:
       - source: abr_ladder
         streams:

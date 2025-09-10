@@ -1,23 +1,24 @@
 __layout:
-  - id: file
+  - id: file_input
     x: 208
     y: 304
-  - id: autocmaf
+  - id: hlsdash
     x: 1088
     y: 384
+__globalConfig: {}
 components:
   - type: input.file
     config:
-      displayName: file
+      displayName: File Input
       sourceName: file-source
       notes: ""
       initialFilename: /data/media/action.mp4
       initialLoop: false
-      id: file
+      id: file_input
     subscriptions: []
   - type: output.autoCmaf
     config:
-      displayName: autoCmaf
+      displayName: HLS/DASH
       name: default
       sessionId: true
       allowPreview: true
@@ -33,9 +34,9 @@ components:
       multiplePrograms: false
       discontinuityHandling: discontinuity
       notes: ""
-      id: autocmaf
+      id: hlsdash
     subscriptions:
-      - source: file
+      - source: file_input
         streams:
           type: take-all-streams
           filter:
