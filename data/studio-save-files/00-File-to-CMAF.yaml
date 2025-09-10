@@ -1,28 +1,23 @@
 __layout:
-  - id: srt_source
-    x: 320
-    y: 224
-  - id: hlsdash
-    x: 1232
-    y: 320
-__globalConfig: {}
+  - id: file
+    x: 208
+    y: 304
+  - id: autocmaf
+    x: 1088
+    y: 384
 components:
-  - type: input.srt-listener
+  - type: input.file
     config:
-      displayName: SRT Source
-      port: 5001
-      host: 0.0.0.0
-      passphrase: ""
-      socketOptions: {}
-      sourceNames: permissive
-      streamIds:
-        - camera1
+      displayName: file
+      sourceName: file-source
       notes: ""
-      id: srt_source
+      initialFilename: /data/media/action.mp4
+      initialLoop: false
+      id: file
     subscriptions: []
   - type: output.autoCmaf
     config:
-      displayName: HLS/DASH
+      displayName: autoCmaf
       name: default
       sessionId: true
       allowPreview: true
@@ -38,9 +33,9 @@ components:
       multiplePrograms: false
       discontinuityHandling: discontinuity
       notes: ""
-      id: hlsdash
+      id: autocmaf
     subscriptions:
-      - source: srt_source
+      - source: file
         streams:
           type: take-all-streams
           filter:
