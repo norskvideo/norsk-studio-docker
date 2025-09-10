@@ -26,12 +26,14 @@ components:
       notes: ""
       id: test_card
     subscriptions: []
-  - type: input.silence
+  - type: input.audioSignal
     config:
       displayName: Silence
       sampleRate: 48000
       channelLayout: stereo
-      notes: ""
+      wave:
+        type: silence
+      notes: Migrated from input.silence to input.audioSignal
       id: silence
     subscriptions: []
   - type: processor.onscreenGraphic
@@ -40,7 +42,7 @@ components:
       initialGraphic: Norsk.png
       initialPosition:
         type: named
-        position: center
+        position: bottomright
       notes: ""
       id: norsk_graphic
     subscriptions:
