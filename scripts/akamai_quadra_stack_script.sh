@@ -11,6 +11,7 @@
 set -euxo pipefail
 
 # Capture output of stackscript
+echo "Logging to /root/stackscript.log"
 exec >/root/stackscript.log 2>&1
 
 
@@ -48,6 +49,11 @@ else
 fi
 
 HEREDOC
+
+# Download example source files
+for source in action.mp4 wildlife.ts; do
+  curl --fail -L "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" -o "/var/norsk-studio/norsk-studio-docker/data/media/$source"
+done
 
 # Change ownership and permissions
 sudo chown -R norsk:norsk /var/norsk-studio/
