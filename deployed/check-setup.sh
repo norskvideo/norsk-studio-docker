@@ -19,6 +19,7 @@ if [[ ! -f oauth2/secrets/.htpasswd || ! -f oauth2/secrets/oauth2-proxy.cfg ]]; 
   bash ../deployed/setup.sh
 fi
 
+# TODO: check for customization
 if [[ -z "$DEPLOY_DOMAIN_NAME" ]]; then
   echo "" > ./extras/http.conf
 else
