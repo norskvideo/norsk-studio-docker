@@ -4,7 +4,8 @@ After=network.target
 # If running on Google cloud, run any startup scripts first
 After=google-startup-scripts.service
 # If running with cloud-init, wait for that to complete
-After=cloud-final.service
+# (TODO: fix. this causes a cycle with multi-user.target)
+#After=cloud-final.service
 
 [Service]
 User=root
