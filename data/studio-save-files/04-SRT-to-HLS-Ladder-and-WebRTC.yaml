@@ -5,12 +5,12 @@ __layout:
   - id: abr_ladder
     x: 1104
     y: -176
-  - id: ll-hls
-    x: 1712
-    y: 176
   - id: webrtc_output
     x: 1712
     y: 384
+  - id: ll-hls
+    x: 1712
+    y: 0
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -160,32 +160,6 @@ components:
           type: take-first-stream
           filter:
             - media: video
-  - type: output.autoCmaf
-    config:
-      displayName: LL-HLS
-      name: default
-      sessionId: false
-      segments:
-        retentionPeriod: 60
-        defaultSegmentCount: 0
-        targetSegmentDuration: 4
-        targetPartDuration: 1
-      destinations: []
-      initialState: enabled
-      multiplePrograms: false
-      notes: ""
-      id: ll-hls
-    subscriptions:
-      - source: abr_ladder
-        streams:
-          type: take-all-streams
-          filter:
-            - media: video
-      - source: srt_input
-        streams:
-          type: take-all-streams
-          filter:
-            - media: audio
   - type: output.whep
     config:
       displayName: WebRTC Output
@@ -204,3 +178,44 @@ components:
           type: take-first-stream
           filter:
             - media: audio
+  - type: output.autoCmaf
+    config:
+      displayName: LL-HLS
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        audioSegmentStrategy:
+          type: default
+        videoSegmentStrategy:
+          type: default
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      pdtEverySegment: true
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      makeProgram: true
+      id: ll-hls
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: srt_input
+        streams:
+          type: take-specific-streams
+          filter:
+            - media: audio
+              displayName: camera1 Audio
+              sourceName: camera1
+              programNumber: 1
+              streamId: 257
+              renditionName: default

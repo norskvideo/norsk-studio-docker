@@ -6,8 +6,8 @@ __layout:
     x: 1248
     y: 32
   - id: hlsdash
-    x: 1840
-    y: 496
+    x: 1696
+    y: 512
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -161,20 +161,26 @@ components:
     config:
       displayName: HLS/DASH
       name: default
-      sessionId: false
+      sessionId: true
       allowPreview: true
       segments:
         retentionPeriod: 60
         defaultSegmentCount: 0
         targetSegmentDuration: 4
         targetPartDuration: 1
+        audioSegmentStrategy:
+          type: default
+        videoSegmentStrategy:
+          type: default
         integralSegmentDuration: true
       destinations: []
       pushMode: hls_dash
+      pdtEverySegment: true
       initialState: enabled
       multiplePrograms: false
       discontinuityHandling: discontinuity
       notes: ""
+      makeProgram: true
       id: hlsdash
     subscriptions:
       - source: abr_ladder
@@ -184,6 +190,11 @@ components:
             - media: video
       - source: srt_input
         streams:
-          type: take-all-streams
+          type: take-specific-streams
           filter:
             - media: audio
+              displayName: camera1 Audio
+              sourceName: camera1
+              programNumber: 1
+              streamId: 257
+              renditionName: default
