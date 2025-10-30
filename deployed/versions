@@ -1,5 +1,5 @@
 export NORSK_MEDIA_IMAGE=${NORSK_MEDIA_IMAGE:-norskvideo/norsk:1.0.402-2025-10-29-ef469b0b}
-export NORSK_STUDIO_IMAGE=${NORSK_STUDIO_IMAGE:-norskvideo/norsk-studio:1.0.402-2025-10-29-ef469b0b}
+export NORSK_STUDIO_IMAGE=${NORSK_STUDIO_IMAGE:-norskvideo/norsk-studio:1.0.402-2025-10-29-ef469b0b-amd64}
 export NGINX_VERSION=1.27.4-alpine-slim
 export OAUTH2_PROXY_VERSION=v7.8.2
 export COTURN_VERSION=4.6.3-alpine
