@@ -48,6 +48,12 @@ usage() {
     echo "      Host: containers use host network (default Linux, faster)"
     echo "  --turn [true|false]"
     echo "      Launch local TURN server (default: $LOCAL_TURN_DEFAULT)"
+    echo "  --workflow <file>"
+    echo "      Load specific workflow at startup"
+    echo "      File must be in data/studio-save-files/ directory"
+    echo "      Can specify just filename or full path"
+    echo "  --overrides <file>"
+    echo "      Apply workflow overrides (path relative to data/)"
     echo "  --enable-nvidia"
     echo "      Enable NVIDIA GPU (Linux only)"
     echo "  --enable-quadra"
@@ -64,6 +70,9 @@ usage() {
     echo ""
     echo "Examples:"
     echo "  ./up.sh"
+    echo "  ./up.sh --workflow 01-SRT-to-HLS-Ladder.yaml"
+    echo "  ./up.sh --workflow data/studio-save-files/02-Test-Card.yaml"
+    echo "  ./up.sh --workflow MyWorkflow.yaml --overrides data/overrides/prod.yaml"
     echo "  HOST_IP=192.168.1.100 ./up.sh --turn true"
     echo "  HOST_IP=\$(curl -s ifconfig.me) ./up.sh"
 }
@@ -101,12 +110,14 @@ main() {
     fi
 
     # Verify that we can at least get docker version output
-    if ! docker compose version; then
+    composeVersion=$(docker compose version 2>&1)
+    if [[ $? -ne 0 ]]; then
         echo "Docker Compose is not installed on your system"
         echo "Please install it and start the Docker daemon before proceeding"
         echo "You can find the installation instructions at: https://docs.docker.com/get-docker/"
         exit 1
     fi
+    echo "Detected: $composeVersion"
 
     arch=$(docker info --format '{{ .Architecture }}')
 
@@ -114,6 +125,8 @@ main() {
     local nvidiaSettings=""
     local quadraSettings=""
     local logSettings=""
+    local workflow=""
+    local overrides=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -151,6 +164,24 @@ main() {
                         exit 1
                     ;;
                 esac
+            ;;
+            --workflow)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --workflow requires a file path"
+                    usage
+                    exit 1
+                fi
+                workflow="$2"
+                shift 2
+            ;;
+            --overrides)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --overrides requires a file path"
+                    usage
+                    exit 1
+                fi
+                overrides="$2"
+                shift 2
             ;;
             --merge)
                 if [[ "$#" -le 1 ]]; then
@@ -216,6 +247,67 @@ main() {
         esac
     done
 
+    # Validate workflow file - must be in data/studio-save-files/
+    if [[ -n "$workflow" ]]; then
+        local workflow_check="$workflow"
+
+        # If absolute path, check it resolves to our studio-save-files directory
+        if [[ "$workflow" == /* ]]; then
+            local abs_studio_save_files="$(cd data/studio-save-files 2>/dev/null && pwd)"
+            if [[ "$workflow" == "$abs_studio_save_files"/* ]]; then
+                # Absolute path within our studio-save-files, this is OK
+                workflow_check="${workflow#$abs_studio_save_files/}"
+            else
+                echo "Error: Workflow must be in data/studio-save-files/ directory"
+                echo "  Got absolute path: $workflow"
+                exit 1
+            fi
+        # Strip data/studio-save-files/ prefix if present
+        elif [[ "$workflow" == data/studio-save-files/* ]]; then
+            workflow_check="${workflow#data/studio-save-files/}"
+        elif [[ "$workflow" == */* ]]; then
+            # Has path separators but not recognized prefix
+            echo "Error: Workflow must be in data/studio-save-files/ directory"
+            echo "  Specify just the filename or use data/studio-save-files/ prefix"
+            echo "  Got: $workflow"
+            exit 1
+        fi
+
+        # Check file exists
+        if [[ ! -f "data/studio-save-files/$workflow_check" ]]; then
+            echo "Error: Workflow file not found: data/studio-save-files/$workflow_check"
+            exit 1
+        fi
+    fi
+
+    if [[ -n "$overrides" ]]; then
+        if [[ "$overrides" == /* ]]; then
+            # Absolute path - just warn if not found
+            if [[ ! -f "$overrides" ]]; then
+                echo "Warning: Overrides file not found at $overrides"
+                echo "  Make sure this path is accessible inside the container"
+            fi
+        else
+            # Relative path - check as-is first, then try under data/
+            if [[ -f "$overrides" ]]; then
+                # File exists as-is, use it
+                :
+            elif [[ -f "data/$overrides" ]]; then
+                # File exists under data/, but user didn't include data/ prefix
+                # This is fine, keep overrides as-is
+                :
+            else
+                # Try to give helpful error message
+                if [[ "$overrides" == data/* ]]; then
+                    echo "Error: Overrides file not found: $overrides"
+                else
+                    echo "Error: Overrides file not found: $overrides or data/$overrides"
+                fi
+                exit 1
+            fi
+        fi
+    fi
+
     local networkDir
     if [[ "$networkMode" == "host" ]]; then
         networkDir="networking/host"
@@ -240,6 +332,33 @@ main() {
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
         export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
         envVars+=("PUBLIC_URL_PREFIX")
+    fi
+
+    # Export workflow and overrides if specified
+    if [[ -n "$workflow" ]]; then
+        # STUDIO_DOCUMENT should be just the filename
+        # Studio loads from /data/studio-save-files/ automatically
+        local normalized_workflow="$workflow"
+        # Strip data/studio-save-files/ prefix if present
+        if [[ "$normalized_workflow" == data/studio-save-files/* ]]; then
+            normalized_workflow="${normalized_workflow#data/studio-save-files/}"
+        elif [[ "$normalized_workflow" == /* ]]; then
+            # Absolute path - extract just the filename
+            normalized_workflow="${normalized_workflow##*/}"
+        fi
+        export STUDIO_DOCUMENT="$normalized_workflow"
+        envVars+=("STUDIO_DOCUMENT")
+    fi
+
+    if [[ -n "$overrides" ]]; then
+        # STUDIO_DOCUMENT_OVERRIDES should be path relative to /data/
+        local normalized_overrides="$overrides"
+        # Strip data/ prefix if present (container path is relative to /data/)
+        if [[ "$normalized_overrides" == data/* ]]; then
+            normalized_overrides="${normalized_overrides#data/}"
+        fi
+        export STUDIO_DOCUMENT_OVERRIDES="$normalized_overrides"
+        envVars+=("STUDIO_DOCUMENT_OVERRIDES")
     fi
 
     ./down.sh
