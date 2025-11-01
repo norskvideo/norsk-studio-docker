@@ -53,7 +53,9 @@ usage() {
     echo "      File must be in data/studio-save-files/ directory"
     echo "      Can specify just filename or full path"
     echo "  --overrides <file>"
-    echo "      Apply workflow overrides (path relative to data/)"
+    echo "      Apply workflow overrides"
+    echo "      File must be in data/studio-save-files/ directory"
+    echo "      Can specify just filename or full path"
     echo "  --enable-nvidia"
     echo "      Enable NVIDIA GPU (Linux only)"
     echo "  --enable-quadra"
@@ -72,7 +74,7 @@ usage() {
     echo "  ./up.sh"
     echo "  ./up.sh --workflow 01-SRT-to-HLS-Ladder.yaml"
     echo "  ./up.sh --workflow data/studio-save-files/02-Test-Card.yaml"
-    echo "  ./up.sh --workflow MyWorkflow.yaml --overrides data/overrides/prod.yaml"
+    echo "  ./up.sh --workflow MyWorkflow.yaml --overrides my-overrides.yaml"
     echo "  HOST_IP=192.168.1.100 ./up.sh --turn true"
     echo "  HOST_IP=\$(curl -s ifconfig.me) ./up.sh"
 }
@@ -80,6 +82,44 @@ usage() {
 realpath() {
     local expanded="${1/#\~/$HOME}"
     echo "$(cd "$(dirname "$expanded")" && pwd)/$(basename "$expanded")"
+}
+
+# Validate that a file is in data/studio-save-files/ and return just the filename
+validate_studio_file() {
+    local file_path="$1"
+    local file_type="$2"  # "workflow" or "overrides"
+    local file_check="$file_path"
+
+    # If absolute path, check it resolves to our studio-save-files directory
+    if [[ "$file_path" == /* ]]; then
+        local abs_studio_save_files="$(cd data/studio-save-files 2>/dev/null && pwd)"
+        if [[ "$file_path" == "$abs_studio_save_files"/* ]]; then
+            # Absolute path within our studio-save-files, this is OK
+            file_check="${file_path#$abs_studio_save_files/}"
+        else
+            echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
+            echo "  Got absolute path: $file_path" >&2
+            exit 1
+        fi
+    # Strip data/studio-save-files/ prefix if present
+    elif [[ "$file_path" == data/studio-save-files/* ]]; then
+        file_check="${file_path#data/studio-save-files/}"
+    elif [[ "$file_path" == */* ]]; then
+        # Has path separators but not recognized prefix
+        echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
+        echo "  Specify just the filename or use data/studio-save-files/ prefix" >&2
+        echo "  Got: $file_path" >&2
+        exit 1
+    fi
+
+    # Check file exists
+    if [[ ! -f "data/studio-save-files/$file_check" ]]; then
+        echo "Error: $file_type file not found: data/studio-save-files/$file_check" >&2
+        exit 1
+    fi
+
+    # Return just the filename
+    echo "$file_check"
 }
 
 main() {
@@ -248,64 +288,15 @@ main() {
     done
 
     # Validate workflow file - must be in data/studio-save-files/
+    local validated_workflow=""
     if [[ -n "$workflow" ]]; then
-        local workflow_check="$workflow"
-
-        # If absolute path, check it resolves to our studio-save-files directory
-        if [[ "$workflow" == /* ]]; then
-            local abs_studio_save_files="$(cd data/studio-save-files 2>/dev/null && pwd)"
-            if [[ "$workflow" == "$abs_studio_save_files"/* ]]; then
-                # Absolute path within our studio-save-files, this is OK
-                workflow_check="${workflow#$abs_studio_save_files/}"
-            else
-                echo "Error: Workflow must be in data/studio-save-files/ directory"
-                echo "  Got absolute path: $workflow"
-                exit 1
-            fi
-        # Strip data/studio-save-files/ prefix if present
-        elif [[ "$workflow" == data/studio-save-files/* ]]; then
-            workflow_check="${workflow#data/studio-save-files/}"
-        elif [[ "$workflow" == */* ]]; then
-            # Has path separators but not recognized prefix
-            echo "Error: Workflow must be in data/studio-save-files/ directory"
-            echo "  Specify just the filename or use data/studio-save-files/ prefix"
-            echo "  Got: $workflow"
-            exit 1
-        fi
-
-        # Check file exists
-        if [[ ! -f "data/studio-save-files/$workflow_check" ]]; then
-            echo "Error: Workflow file not found: data/studio-save-files/$workflow_check"
-            exit 1
-        fi
+        validated_workflow=$(validate_studio_file "$workflow" "Workflow")
     fi
 
+    # Validate overrides file - must be in data/studio-save-files/
+    local validated_overrides=""
     if [[ -n "$overrides" ]]; then
-        if [[ "$overrides" == /* ]]; then
-            # Absolute path - just warn if not found
-            if [[ ! -f "$overrides" ]]; then
-                echo "Warning: Overrides file not found at $overrides"
-                echo "  Make sure this path is accessible inside the container"
-            fi
-        else
-            # Relative path - check as-is first, then try under data/
-            if [[ -f "$overrides" ]]; then
-                # File exists as-is, use it
-                :
-            elif [[ -f "data/$overrides" ]]; then
-                # File exists under data/, but user didn't include data/ prefix
-                # This is fine, keep overrides as-is
-                :
-            else
-                # Try to give helpful error message
-                if [[ "$overrides" == data/* ]]; then
-                    echo "Error: Overrides file not found: $overrides"
-                else
-                    echo "Error: Overrides file not found: $overrides or data/$overrides"
-                fi
-                exit 1
-            fi
-        fi
+        validated_overrides=$(validate_studio_file "$overrides" "Overrides")
     fi
 
     local networkDir
@@ -334,30 +325,14 @@ main() {
         envVars+=("PUBLIC_URL_PREFIX")
     fi
 
-    # Export workflow and overrides if specified
-    if [[ -n "$workflow" ]]; then
-        # STUDIO_DOCUMENT should be just the filename
-        # Studio loads from /data/studio-save-files/ automatically
-        local normalized_workflow="$workflow"
-        # Strip data/studio-save-files/ prefix if present
-        if [[ "$normalized_workflow" == data/studio-save-files/* ]]; then
-            normalized_workflow="${normalized_workflow#data/studio-save-files/}"
-        elif [[ "$normalized_workflow" == /* ]]; then
-            # Absolute path - extract just the filename
-            normalized_workflow="${normalized_workflow##*/}"
-        fi
-        export STUDIO_DOCUMENT="$normalized_workflow"
+    # Export workflow and overrides if specified (just the filename)
+    if [[ -n "$validated_workflow" ]]; then
+        export STUDIO_DOCUMENT="$validated_workflow"
         envVars+=("STUDIO_DOCUMENT")
     fi
 
-    if [[ -n "$overrides" ]]; then
-        # STUDIO_DOCUMENT_OVERRIDES should be path relative to /data/
-        local normalized_overrides="$overrides"
-        # Strip data/ prefix if present (container path is relative to /data/)
-        if [[ "$normalized_overrides" == data/* ]]; then
-            normalized_overrides="${normalized_overrides#data/}"
-        fi
-        export STUDIO_DOCUMENT_OVERRIDES="$normalized_overrides"
+    if [[ -n "$validated_overrides" ]]; then
+        export STUDIO_DOCUMENT_OVERRIDES="$validated_overrides"
         envVars+=("STUDIO_DOCUMENT_OVERRIDES")
     fi
 
