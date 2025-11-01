@@ -175,12 +175,12 @@ main() {
         else
             export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         fi
-        envVars+="GLOBAL_ICE_SERVERS"
+        envVars+=("GLOBAL_ICE_SERVERS")
     fi
 
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
         export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
-        envVars+="PUBLIC_URL_PREFIX"
+        envVars+=("PUBLIC_URL_PREFIX")
     fi
 
     ./down.sh
