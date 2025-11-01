@@ -7,13 +7,31 @@ export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
 
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
+declare IS_WSL=false
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
+# Detect platform and set defaults
 if [[ "$OSTYPE" == "linux"* ]]; then
-    NETWORK_MODE_DEFAULT="host"
-    LOCAL_TURN_DEFAULT=false
+    # Check if running in WSL
+    if grep -qiE '(microsoft|wsl)' /proc/version 2>/dev/null; then
+        IS_WSL=true
+        # Check for WSL2 (has proper virtualization)
+        if ! grep -qiE 'wsl2' /proc/version; then
+            echo "Error: WSL1 detected. Only WSL2 is supported."
+            echo "Please upgrade to WSL2: https://docs.microsoft.com/en-us/windows/wsl/install"
+            exit 1
+        fi
+        # WSL2 uses docker networking mode
+        NETWORK_MODE_DEFAULT="docker"
+        LOCAL_TURN_DEFAULT=true
+    else
+        # Native Linux uses host mode
+        NETWORK_MODE_DEFAULT="host"
+        LOCAL_TURN_DEFAULT=false
+    fi
 else
+    # macOS uses docker mode
     NETWORK_MODE_DEFAULT="docker"
     LOCAL_TURN_DEFAULT=true
 fi
@@ -21,15 +39,33 @@ LICENSE_FILE="secrets/license.json"
 
 usage() {
     echo "Usage: ${0##*/} [options]"
-    echo "  Options:"
-    echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
-    echo "    --turn [true|false]: launch a local turn server. Defaults to $LOCAL_TURN_DEFAULT on $OSTYPE"
-    echo "    --enable-nvidia : enable nvidia access (Linux only)"
-    echo "    --enable-quadra : enable quadra access (Linux only)"
-    echo "    --merge filename : build a single compose file from your options"
-    echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
-    echo "  Environment variables:"
-    echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
+    echo ""
+    echo "Start Norsk Studio with Docker Compose"
+    echo ""
+    echo "Options:"
+    echo "  --network-mode [docker|host]"
+    echo "      Docker: containers use internal networking (default macOS/WSL2)"
+    echo "      Host: containers use host network (default Linux, faster)"
+    echo "  --turn [true|false]"
+    echo "      Launch local TURN server (default: $LOCAL_TURN_DEFAULT)"
+    echo "  --enable-nvidia"
+    echo "      Enable NVIDIA GPU (Linux only)"
+    echo "  --enable-quadra"
+    echo "      Enable Quadra GPU (Linux only)"
+    echo "  --logs <dir>"
+    echo "      Mount Norsk Media logs to directory"
+    echo "  --merge <file>"
+    echo "      Generate merged compose file without starting"
+    echo ""
+    echo "Environment:"
+    echo "  HOST_IP - IP/hostname for UI access and stream URLs"
+    echo "            On a cloud server it can be set to the public IP"
+    echo "            (default: 127.0.0.1)"
+    echo ""
+    echo "Examples:"
+    echo "  ./up.sh"
+    echo "  HOST_IP=192.168.1.100 ./up.sh --turn true"
+    echo "  HOST_IP=\$(curl -s ifconfig.me) ./up.sh"
 }
 
 realpath() {
@@ -46,8 +82,15 @@ main() {
 
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
-        echo "No license.json file found in $licenseFilePath"
-        echo "  See Readme for instructions on how to obtain one."
+        echo "Error: No license.json file found at $licenseFilePath"
+        echo "  Get a license at: https://docs.norsk.video/studio/latest/getting-started/setup.html"
+        exit 1
+    fi
+
+    # Check license file is not empty
+    if [[ ! -s  $licenseFilePath ]] ; then
+        echo "Error: license.json is empty"
+        echo "  Get a license at: https://docs.norsk.video/studio/latest/getting-started/setup.html"
         exit 1
     fi
 
@@ -115,6 +158,15 @@ main() {
                     usage
                     exit 1
                 fi
+                local mergeDir=$(dirname "$2")
+                if [[ ! -d "$mergeDir" ]]; then
+                    echo "Error: Directory does not exist: $mergeDir"
+                    exit 1
+                fi
+                if [[ ! -w "$mergeDir" ]]; then
+                    echo "Error: Directory is not writable: $mergeDir"
+                    exit 1
+                fi
                 action="config"
                 toFile="$2"
                 shift 2
@@ -125,7 +177,14 @@ main() {
                     usage
                     exit 1
                 fi
-                mkdir -p "$2"
+                if ! mkdir -p "$2" 2>/dev/null; then
+                    echo "Error: Cannot create logs directory: $2"
+                    exit 1
+                fi
+                if [[ ! -w "$2" ]]; then
+                    echo "Error: Logs directory is not writable: $2"
+                    exit 1
+                fi
                 export LOG_ROOT=$(realpath "$2")
                 logSettings="-f yaml/volumes/norsk-media-logs.yaml"
                 shift 2
@@ -184,10 +243,12 @@ main() {
     fi
 
     ./down.sh
-    # The sed is just to remove multiple spaces when options are blank...
-    local cmd=$(echo "docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action" | sed 's/  \+/ /g')
+
+    # Build docker compose arguments once
+    local -a composeArgs=($norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
+
     echo "Launching with:"
-    echo "  $cmd"
+    echo "  docker compose ${composeArgs[*]}"
     local firstTime=true
     for envVar in "${envVars[@]}"
     do
@@ -199,11 +260,11 @@ main() {
     done
 
     if [[ $toFile == "" ]]; then
-        eval "$cmd"
+        docker compose "${composeArgs[@]}"
         echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
         echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
     else
-        eval "$cmd" > "$toFile"
+        docker compose "${composeArgs[@]}" > "$toFile"
         echo "Combined docker compose file written to $toFile"
     fi
 }
