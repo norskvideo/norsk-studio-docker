@@ -12,7 +12,7 @@ components:
       displayName: Action MP4 File Input
       sourceName: file-source
       notes: ""
-      initialFilename: /data/media/action.mp4
+      initialFilename: /data/assets/action.mp4
       initialLoop: false
       initialStart: playing
       id: action_mp4_file_input
