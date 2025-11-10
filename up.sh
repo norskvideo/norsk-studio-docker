@@ -5,6 +5,10 @@ cd "${0%/*}"
 export NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
 export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
 
+# Nightly builds
+export NIGHTLY_NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
+export NIGHTLY_NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
+
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
 
@@ -22,6 +26,7 @@ LICENSE_FILE="secrets/license.json"
 usage() {
     echo "Usage: ${0##*/} [options]"
     echo "  Options:"
+    echo "    --nightly : use nightly builds instead of blessed releases"
     echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
     echo "    --turn [true|false]: launch a local turn server. Defaults to $LOCAL_TURN_DEFAULT on $OSTYPE"
     echo "    --enable-nvidia : enable nvidia access (Linux only)"
@@ -76,6 +81,11 @@ main() {
             -h | --help)
                 usage
                 exit 0
+            ;;
+            --nightly)
+                export NORSK_MEDIA_IMAGE=$NIGHTLY_NORSK_MEDIA_IMAGE
+                export NORSK_STUDIO_IMAGE=$NIGHTLY_NORSK_STUDIO_IMAGE
+                shift 1
             ;;
             --network-mode)
                 if [[ "$OSTYPE" == "linux"* ]]; then
