@@ -14,10 +14,26 @@ declare LOCAL_TURN_DEFAULT
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
+# Detect platform and set defaults
 if [[ "$OSTYPE" == "linux"* ]]; then
-    NETWORK_MODE_DEFAULT="host"
-    LOCAL_TURN_DEFAULT=false
+    # Check if running in WSL
+    if grep -qiE '(microsoft|wsl)' /proc/version 2>/dev/null; then
+        # Check for WSL2 (has proper virtualization)
+        if ! grep -qiE 'wsl2' /proc/version; then
+            echo "Error: WSL1 detected. Only WSL2 is supported."
+            echo "Please upgrade to WSL2: https://docs.microsoft.com/en-us/windows/wsl/install"
+            exit 1
+        fi
+        # WSL2 uses docker networking mode
+        NETWORK_MODE_DEFAULT="docker"
+        LOCAL_TURN_DEFAULT=true
+    else
+        # Native Linux uses host mode
+        NETWORK_MODE_DEFAULT="host"
+        LOCAL_TURN_DEFAULT=false
+    fi
 else
+    # macOS uses docker mode
     NETWORK_MODE_DEFAULT="docker"
     LOCAL_TURN_DEFAULT=true
 fi
@@ -25,21 +41,88 @@ LICENSE_FILE="secrets/license.json"
 
 usage() {
     echo "Usage: ${0##*/} [options]"
-    echo "  Options:"
-    echo "    --nightly : use nightly builds instead of blessed releases"
-    echo "    --network-mode [docker|host] : whether the example should run in host or docker network mode.  Defaults to $NETWORK_MODE_DEFAULT on $OSTYPE"
-    echo "    --turn [true|false]: launch a local turn server. Defaults to $LOCAL_TURN_DEFAULT on $OSTYPE"
-    echo "    --enable-nvidia : enable nvidia access (Linux only)"
-    echo "    --enable-quadra : enable quadra access (Linux only)"
-    echo "    --merge filename : build a single compose file from your options"
-    echo "    --logs dirname : mount Norsk Media logs to the given directory (path relative to folder containing this up.sh)"
-    echo "  Environment variables:"
-    echo "    HOST_IP - the IP used for access to this Norsk application. default: 127.0.0.1"
+    echo ""
+    echo "Start Norsk Studio with Docker Compose"
+    echo ""
+    echo "Options:"
+    echo "  --network-mode [docker|host]"
+    echo "      Docker: containers use internal networking (default macOS/WSL2)"
+    echo "      Host: containers use host network (default Linux, faster)"
+    echo "  --turn [true|false]"
+    echo "      Launch local TURN server (default: $LOCAL_TURN_DEFAULT)"
+    echo "  --workflow <file>"
+    echo "      Load specific workflow at startup"
+    echo "      File must be in data/studio-save-files/ directory"
+    echo "      Can specify just filename or full path"
+    echo "  --overrides <file>"
+    echo "      Apply workflow overrides"
+    echo "      File must be in data/studio-save-files/ directory"
+    echo "      Can specify just filename or full path"
+    echo "  --nightly : use nightly builds instead of last major release"
+    echo "  --enable-nvidia"
+    echo "      Enable NVIDIA GPU (Linux only)"
+    echo "  --enable-quadra"
+    echo "      Enable Quadra GPU (Linux only)"
+    echo "  --logs <dir>"
+    echo "      Mount Norsk Media logs to directory"
+    echo "  --merge <file>"
+    echo "      Generate merged compose file without starting"
+    echo ""
+    echo "Environment:"
+    echo "  HOST_IP - IP/hostname for UI access and stream URLs"
+    echo "            On a cloud server it can be set to the public IP"
+    echo "            (default: 127.0.0.1)"
+    echo ""
+    echo "Examples:"
+    echo "  ./up.sh"
+    echo "  ./up.sh --workflow 01-SRT-to-HLS-Ladder.yaml"
+    echo "  ./up.sh --workflow data/studio-save-files/02-Test-Card.yaml"
+    echo "  ./up.sh --workflow MyWorkflow.yaml --overrides my-overrides.yaml"
+    echo "  HOST_IP=192.168.1.100 ./up.sh --turn true"
+    echo "  HOST_IP=\$(curl -s ifconfig.me) ./up.sh"
 }
 
 realpath() {
     local expanded="${1/#\~/$HOME}"
     echo "$(cd "$(dirname "$expanded")" && pwd)/$(basename "$expanded")"
+}
+
+# Validate that a file is in data/studio-save-files/ and return just the filename
+validate_studio_file() {
+    local file_path="$1"
+    local file_type="$2"  # "workflow" or "overrides"
+    local file_check="$file_path"
+
+    # If absolute path, check it resolves to our studio-save-files directory
+    if [[ "$file_path" == /* ]]; then
+        local abs_studio_save_files="$(cd data/studio-save-files 2>/dev/null && pwd)"
+        if [[ "$file_path" == "$abs_studio_save_files"/* ]]; then
+            # Absolute path within our studio-save-files, this is OK
+            file_check="${file_path#$abs_studio_save_files/}"
+        else
+            echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
+            echo "  Got absolute path: $file_path" >&2
+            exit 1
+        fi
+    # Strip data/studio-save-files/ prefix if present
+    elif [[ "$file_path" == data/studio-save-files/* ]]; then
+        file_check="${file_path#data/studio-save-files/}"
+    elif [[ "$file_path" == */* ]]; then
+        # Has path separators but not recognized prefix
+        echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
+        echo "  Specify just the filename or use data/studio-save-files/ prefix" >&2
+        echo "  Got: $file_path" >&2
+        exit 1
+    fi
+
+    # Check file exists
+    if [[ ! -f "data/studio-save-files/$file_check" ]]; then
+        echo "Error: $file_type file not found: data/studio-save-files/$file_check" >&2
+        exit 1
+    fi
+
+    # Return just the filename
+    echo "$file_check"
 }
 
 main() {
@@ -51,8 +134,15 @@ main() {
 
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
-        echo "No license.json file found in $licenseFilePath"
-        echo "  See Readme for instructions on how to obtain one."
+        echo "Error: No license.json file found at $licenseFilePath"
+        echo "  Get a license at: https://docs.norsk.video/studio/latest/getting-started/setup.html"
+        exit 1
+    fi
+
+    # Check license file is not empty
+    if [[ ! -s  $licenseFilePath ]] ; then
+        echo "Error: license.json is empty"
+        echo "  Get a license at: https://docs.norsk.video/studio/latest/getting-started/setup.html"
         exit 1
     fi
 
@@ -63,19 +153,21 @@ main() {
     fi
 
     # Verify that we can at least get docker version output
-    if ! docker compose version; then
+    composeVersion=$(docker compose version 2>&1)
+    if [[ $? -ne 0 ]]; then
         echo "Docker Compose is not installed on your system"
         echo "Please install it and start the Docker daemon before proceeding"
         echo "You can find the installation instructions at: https://docs.docker.com/get-docker/"
         exit 1
     fi
-
-    arch=$(docker info --format '{{ .Architecture }}')
+    echo "Detected: $composeVersion"
 
     local localTurn=$LOCAL_TURN_DEFAULT
     local nvidiaSettings=""
     local quadraSettings=""
     local logSettings=""
+    local workflow=""
+    local overrides=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -119,10 +211,37 @@ main() {
                     ;;
                 esac
             ;;
+            --workflow)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --workflow requires a file path"
+                    usage
+                    exit 1
+                fi
+                workflow="$2"
+                shift 2
+            ;;
+            --overrides)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --overrides requires a file path"
+                    usage
+                    exit 1
+                fi
+                overrides="$2"
+                shift 2
+            ;;
             --merge)
                 if [[ "$#" -le 1 ]]; then
                     echo "merge needs an output file specified"
                     usage
+                    exit 1
+                fi
+                local mergeDir=$(dirname "$2")
+                if [[ ! -d "$mergeDir" ]]; then
+                    echo "Error: Directory does not exist: $mergeDir"
+                    exit 1
+                fi
+                if [[ ! -w "$mergeDir" ]]; then
+                    echo "Error: Directory is not writable: $mergeDir"
                     exit 1
                 fi
                 action="config"
@@ -135,7 +254,14 @@ main() {
                     usage
                     exit 1
                 fi
-                mkdir -p "$2"
+                if ! mkdir -p "$2" 2>/dev/null; then
+                    echo "Error: Cannot create logs directory: $2"
+                    exit 1
+                fi
+                if [[ ! -w "$2" ]]; then
+                    echo "Error: Logs directory is not writable: $2"
+                    exit 1
+                fi
                 export LOG_ROOT=$(realpath "$2")
                 logSettings="-f yaml/volumes/norsk-media-logs.yaml"
                 shift 2
@@ -167,6 +293,18 @@ main() {
         esac
     done
 
+    # Validate workflow file - must be in data/studio-save-files/
+    local validated_workflow=""
+    if [[ -n "$workflow" ]]; then
+        validated_workflow=$(validate_studio_file "$workflow" "Workflow")
+    fi
+
+    # Validate overrides file - must be in data/studio-save-files/
+    local validated_overrides=""
+    if [[ -n "$overrides" ]]; then
+        validated_overrides=$(validate_studio_file "$overrides" "Overrides")
+    fi
+
     local networkDir
     if [[ "$networkMode" == "host" ]]; then
         networkDir="networking/host"
@@ -185,19 +323,32 @@ main() {
         else
             export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
         fi
-        envVars+="GLOBAL_ICE_SERVERS"
+        envVars+=("GLOBAL_ICE_SERVERS")
     fi
 
     if [[ "$HOST_IP" != "127.0.0.1" ]]; then
-        export PUBLIC_URL_PREFIX="http://$HOST_IP:8080"
-        envVars+="PUBLIC_URL_PREFIX"
+        export PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-"http://$HOST_IP:8080"}
+        envVars+=("PUBLIC_URL_PREFIX")
+    fi
+
+    # Export workflow and overrides if specified (just the filename)
+    if [[ -n "$validated_workflow" ]]; then
+        export STUDIO_DOCUMENT="$validated_workflow"
+        envVars+=("STUDIO_DOCUMENT")
+    fi
+
+    if [[ -n "$validated_overrides" ]]; then
+        export STUDIO_DOCUMENT_OVERRIDES="$validated_overrides"
+        envVars+=("STUDIO_DOCUMENT_OVERRIDES")
     fi
 
     ./down.sh
-    # The sed is just to remove multiple spaces when options are blank...
-    local cmd=$(echo "docker compose $norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action" | sed 's/  \+/ /g')
+
+    # Build docker compose arguments once
+    local -a composeArgs=($norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
+
     echo "Launching with:"
-    echo "  $cmd"
+    echo "  docker compose ${composeArgs[*]}"
     local firstTime=true
     for envVar in "${envVars[@]}"
     do
@@ -209,11 +360,11 @@ main() {
     done
 
     if [[ $toFile == "" ]]; then
-        eval "$cmd"
+        docker compose "${composeArgs[@]}"
         echo "The Norsk Studio UI is available on http://$HOST_IP:8000"
         echo "The Norsk Workflow Visualiser is available on http://$HOST_IP:6791"
     else
-        eval "$cmd" > "$toFile"
+        docker compose "${composeArgs[@]}" > "$toFile"
         echo "Combined docker compose file written to $toFile"
     fi
 }
