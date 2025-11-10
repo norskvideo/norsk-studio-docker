@@ -6,8 +6,8 @@ export NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
 export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
 
 # Nightly builds
-export NIGHTLY_NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
-export NIGHTLY_NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
+export NIGHTLY_NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-11-10-c093fc9b
+export NIGHTLY_NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.27.0-2025-11-10-a46392dd
 
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
