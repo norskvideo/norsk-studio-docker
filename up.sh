@@ -65,6 +65,8 @@ usage() {
     echo "      Enable Quadra GPU (Linux only)"
     echo "  --logs <dir>"
     echo "      Mount Norsk Media logs to directory"
+    echo "  --working-directory <dir>"
+    echo "      Use custom data directory instead of ./data"
     echo "  --merge <file>"
     echo "      Generate merged compose file without starting"
     echo ""
@@ -166,6 +168,7 @@ main() {
     local nvidiaSettings=""
     local quadraSettings=""
     local logSettings=""
+    local dataSettings=""
     local workflow=""
     local overrides=""
     while [[ $# -gt 0 ]]; do
@@ -266,6 +269,24 @@ main() {
                 logSettings="-f yaml/volumes/norsk-media-logs.yaml"
                 shift 2
             ;;
+            --working-directory)
+                if [[ "$#" -le 1 ]]; then
+                    echo "need to specify a directory for the working directory"
+                    usage
+                    exit 1
+                fi
+                if [[ ! -d "$2" ]]; then
+                    echo "Error: Working directory does not exist: $2"
+                    exit 1
+                fi
+                if [[ ! -r "$2" ]]; then
+                    echo "Error: Working directory is not readable: $2"
+                    exit 1
+                fi
+                export DATA_ROOT=$(realpath "$2")
+                dataSettings="-f yaml/volumes/norsk-media-data.yaml -f yaml/volumes/norsk-studio-data.yaml"
+                shift 2
+            ;;
             --enable-nvidia)
                 if [[ "$OSTYPE" == "linux"* ]]; then
                     nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
@@ -331,6 +352,10 @@ main() {
         envVars+=("PUBLIC_URL_PREFIX")
     fi
 
+    if [[ -n "$dataSettings" ]]; then
+        envVars+=("DATA_ROOT")
+    fi
+
     # Export workflow and overrides if specified (just the filename)
     if [[ -n "$validated_workflow" ]]; then
         export STUDIO_DOCUMENT="$validated_workflow"
@@ -345,7 +370,7 @@ main() {
     ./down.sh
 
     # Build docker compose arguments once
-    local -a composeArgs=($norskMediaSettings $logSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
+    local -a composeArgs=($norskMediaSettings $logSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
 
     echo "Launching with:"
     echo "  docker compose ${composeArgs[*]}"

@@ -1,0 +1,4 @@
+services:
+  norsk-studio:
+    volumes:
+      - ${DATA_ROOT}:/data
