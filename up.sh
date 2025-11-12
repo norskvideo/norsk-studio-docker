@@ -243,10 +243,10 @@ main() {
                     echo "Error: Directory does not exist: $mergeDir"
                     exit 1
                 fi
-                if [[ ! -w "$mergeDir" ]]; then
-                    echo "Error: Directory is not writable: $mergeDir"
-                    exit 1
-                fi
+                # if [[ ! -w "$mergeDir" ]]; then
+                #     echo "Error: Directory is not writable: $mergeDir"
+                #     exit 1
+                # fi
                 action="config"
                 toFile="$2"
                 shift 2
