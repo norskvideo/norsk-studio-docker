@@ -43,3 +43,6 @@ STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-}
 # Logging
 LOG_LEVEL=info # error warning info debug silly
 NODE_DEBUG=norsk # Output extra trace (e.g. gRPC messages)
+
+GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+

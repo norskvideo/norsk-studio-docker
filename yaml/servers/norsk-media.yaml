@@ -8,6 +8,9 @@ services:
     command: --license-file /run/secrets/license.json
     # CEF (needs a large amount of shared memory)
     shm_size: '2gb'
+    env_file:
+      - ../../env/norsk-media-env # Environment variables used by Norsk Media
+
     # privileged: true
     restart: always
     volumes:
