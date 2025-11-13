@@ -284,7 +284,6 @@ main() {
                     exit 1
                 fi
                 export DATA_ROOT=$(realpath "$2")
-                dataSettings="-f yaml/volumes/norsk-media-data.yaml -f yaml/volumes/norsk-studio-data.yaml"
                 shift 2
             ;;
             --enable-nvidia)

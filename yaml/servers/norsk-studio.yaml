@@ -10,7 +10,7 @@ services:
       norsk-media:
         condition: service_healthy
     volumes:
-      - ../../data:/data
+      - ${DATA_ROOT:-../../data}:/data
     command: npx studio-editor
     env_file:
       - ../../env/studio-env # Environment variables used by Norsk Studio

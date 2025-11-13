@@ -11,7 +11,7 @@ services:
     # privileged: true
     restart: always
     volumes:
-      - ../../data:/data
+      - ${DATA_ROOT:-../../data}:/data
       - ../../secrets:/data/secrets:ro
       - /dev/shm:/dev/shm/
     healthcheck:

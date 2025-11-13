@@ -1,4 +1,0 @@
-services:
-  norsk-media:
-    volumes:
-      - ${DATA_ROOT}:/data
