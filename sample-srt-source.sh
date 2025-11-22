@@ -5,6 +5,10 @@ cd "${0%/*}"
 mkdir -p ./data/media
 SOURCES_DIR=$(readlink -f ./data/media)
 
+oops() {
+    echo "$0:" "$@" >&2
+    exit 1
+}
 
 if command -v curl > /dev/null 2>&1; then
     fetch() { curl  --silent --fail -L "$1" -o "$2"; }

@@ -9,6 +9,8 @@ set -eo pipefail
     umask 0022
 
     # Various helper functions
+    # NOTE: Similar functions exist in scripts/common.sh
+    #       If you update here, consider updating there too.
     oops() {
         echo "$0:" "$@" >&2
         exit 1
@@ -78,14 +80,19 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="1.0.402-2025-11-13-06c4dcba-1763119260"
-    releaseHash="090d85ccbf32054054dc00f39e1fd98bb67369cb4da413046809d8289f42f8b2"
-    releaseURL="https://github.com/norskvideo/norsk-studio-docker/archive/refs/tags/$releaseVersion.tar.gz"
+    releaseVersion="2.0.0-TBD"
+    repoURL="https://github.com/norskvideo/norsk-studio-docker.git"
 
-    tmpDir="$(mktemp -d -t norsk-studio-tarball-unpack.XXXXXXXXXX || \
-        oops "Can't create temporary directory for downloading the Norsk Studio tarball")"
+    tmpDir="$(mktemp -d -t norsk-studio-install.XXXXXXXXXX || \
+        oops "Can't create temporary directory for installation")"
     tmpLicense="$tmpDir/license.json"
-    tarball="$tmpDir/norsk-studio-$releaseVersion.tar.gz"
+
+    # Git wrapper - use docker if no host git
+    if command -v git > /dev/null 2>&1; then
+        git_cmd() { git "$@"; }
+    else
+        git_cmd() { docker run --rm -v "$PWD:/repo" -w /repo alpine/git "$@"; }
+    fi
 
     cleanup() {
         rm -rf "$tmpDir"
@@ -97,10 +104,10 @@ set -eo pipefail
     echo "Welcome to the Norsk Studio installer.  This script will download"
     echo "and install the Norsk Engine and Norsk Studio containers into your"
     echo "local docker.  It will also create a directory at the current location"
-    echo "called 'norsk-studio' that contains a couple of helper scripts and some"
-    echo "sample content. In total, this requires 7GB of disk space. After"
+    echo "called '$targetDirname' that contains helper scripts and sample"
+    echo "content. In total, this requires 7GB of disk space. After"
     echo "installation, you can completely remove Norsk Studio by simply"
-    echo "deleting the norsk-studio directory and removing the docker"
+    echo "deleting the $targetDirname directory and removing the docker"
     echo "containers."
     echo
     echo "If you wish to proceed then press 'enter', otherwise"
@@ -109,25 +116,11 @@ set -eo pipefail
 
     # Check prerequisites
     echo "Checking prerequisites"
-    require_util tar "unpack the binary tarball"
 
-    if command -v curl > /dev/null 2>&1; then
-        fetch() { curl  --silent --fail -L "$1" -o "$2"; }
-        elif command -v wget > /dev/null 2>&1; then
-        fetch() { wget --quiet "$1" -O "$2"; }
-    else
-        oops "you don't have wget or curl installed, which I need to download the binary tarball"
-    fi
-
-    # We need a hash calculator
-    if command -v sha256sum > /dev/null 2>&1; then
-        hashCmd="sha256sum -b"
-        elif command -v shasum > /dev/null 2>&1; then
-        hashCmd="shasum -a 256 -b"
-        elif command -v openssl > /dev/null 2>&1; then
-        hashCmd="openssl dgst -r -sha256"
-    else
-        oops "cannot verify the SHA-256 hash of '$releaseURL'; you need one of 'shasum', 'sha256sum', or 'openssl'"
+    # We need either git or docker (for git-in-docker)
+    if ! command -v git > /dev/null 2>&1; then
+        # Will use docker for git, so docker check below covers us
+        echo "Note: git not found, will use git via docker"
     fi
 
     # Check that docker compose is available and running
@@ -156,30 +149,17 @@ set -eo pipefail
     echo "Found docker compose $composeVersion and other required utilities, proceeding"
     echo
 
-    unpackTo=$tmpDir/unpack
-    mkdir -p "$unpackTo"
-
     if [ "$1" != "--local" ]; then
-        echo "Downloading Norsk Studio from '$releaseURL'"
-        fetch "$releaseURL" "$tarball" || oops "failed to download '$releaseURL'"
-
-        calculatedHash=$($hashCmd "$tarball" | cut -c1-64)
-
-        if [ "$calculatedHash" != "$releaseHash" ]; then
-            oops "SHA-256 hash mismatch in '$releaseURL'; expected $releaseHash, got $calculatedHash"
-        fi
-
-        tar -xf "$tarball" -C "$unpackTo" || oops "failed to unpack '$releaseURL'"
+        echo "Cloning Norsk Studio $releaseVersion"
+        git_cmd clone --depth 1 --branch "$releaseVersion" "$repoURL" "$targetDirname" || \
+            oops "failed to clone '$repoURL'"
     else
-        mkdir -p "$unpackTo/norsk-studio-local"
-        cp -r ./* "$unpackTo/norsk-studio-local/"
+        echo "Installing from local directory"
+        git_cmd clone . "$targetDirname" || oops "failed to clone local repo"
     fi
 
-    unpackDir=$(realpath "$unpackTo"/norsk-studio*/)
+    mkdir -p "$targetDirname"/secrets
+    mv "$tmpLicense" "$targetDirname"/secrets
 
-    mkdir -p "$unpackDir"/secrets
-    mv "$tmpLicense" "$unpackDir"/secrets
-
-    mkdir -p "$targetDirname"
-    "$unpackDir"/scripts/install-phase-ii "$unpackDir" "$targetDirname"
+    "$targetDirname"/scripts/install-phase-ii "$targetDirname"
 } # End of wrapping

@@ -2,12 +2,15 @@
 set -eo pipefail
 cd "${0%/*}"
 
-export NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-09-10-38401717
-export NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.0.402-2025-09-10-38401717
-
-# Nightly builds
-export NIGHTLY_NORSK_MEDIA_IMAGE=norskvideo/norsk:1.0.402-2025-11-13-06c4dcba
-export NIGHTLY_NORSK_STUDIO_IMAGE=norskvideo/norsk-studio:1.27.0-2025-11-14-4dde2791
+# Load container versions
+if [[ ! -f versions ]]; then
+    echo "Error: versions file not found"
+    echo "Reinstall or run './manage.sh --use-containers'"
+    exit 1
+fi
+source versions
+export NORSK_MEDIA_IMAGE
+export NORSK_STUDIO_IMAGE
 
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
@@ -58,7 +61,6 @@ usage() {
     echo "      Apply workflow overrides"
     echo "      File must be in data/studio-save-files/ directory"
     echo "      Can specify just filename or full path"
-    echo "  --nightly : use nightly builds instead of last major release"
     echo "  --enable-nvidia"
     echo "      Enable NVIDIA GPU (Linux only)"
     echo "  --enable-quadra"
@@ -176,11 +178,6 @@ main() {
             -h | --help)
                 usage
                 exit 0
-            ;;
-            --nightly)
-                export NORSK_MEDIA_IMAGE=$NIGHTLY_NORSK_MEDIA_IMAGE
-                export NORSK_STUDIO_IMAGE=$NIGHTLY_NORSK_STUDIO_IMAGE
-                shift 1
             ;;
             --network-mode)
                 if [[ "$OSTYPE" == "linux"* ]]; then
@@ -371,6 +368,10 @@ main() {
     # Build docker compose arguments once
     local -a composeArgs=($norskMediaSettings $logSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
 
+    echo "Containers:"
+    echo "  Media:  ${NORSK_MEDIA_IMAGE#*:}"
+    echo "  Studio: ${NORSK_STUDIO_IMAGE#*:}"
+    echo ""
     echo "Launching with:"
     echo "  docker compose ${composeArgs[*]}"
     local firstTime=true
