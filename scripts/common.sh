@@ -8,6 +8,13 @@ oops() {
     exit 1
 }
 
+# Git wrapper - use docker if no host git (or USE_DOCKER_GIT=1 for testing)
+if [[ -z "$USE_DOCKER_GIT" ]] && command -v git > /dev/null 2>&1; then
+    git_cmd() { git "$@"; }
+else
+    git_cmd() { docker run --rm -v "$PWD:/repo" -w /repo alpine/git "$@"; }
+fi
+
 # HTTP fetch wrapper - curl or wget
 if command -v curl > /dev/null 2>&1; then
     fetch() { curl --silent --fail -L "$1" -o "$2"; }

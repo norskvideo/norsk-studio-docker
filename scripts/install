@@ -87,8 +87,8 @@ set -eo pipefail
         oops "Can't create temporary directory for installation")"
     tmpLicense="$tmpDir/license.json"
 
-    # Git wrapper - use docker if no host git
-    if command -v git > /dev/null 2>&1; then
+    # Git wrapper - use docker if no host git (or USE_DOCKER_GIT=1 for testing)
+    if [[ -z "$USE_DOCKER_GIT" ]] && command -v git > /dev/null 2>&1; then
         git_cmd() { git "$@"; }
     else
         git_cmd() { docker run --rm -v "$PWD:/repo" -w /repo alpine/git "$@"; }

@@ -36,17 +36,17 @@ usage() {
 }
 
 get_current_version() {
-    git describe --tags --abbrev=0 2>/dev/null || echo "unknown"
+    git_cmd describe --tags --abbrev=0 2>/dev/null || echo "unknown"
 }
 
 get_latest_version() {
-    git tag -l "$TAG_PATTERN" | sort | tail -1
+    git_cmd tag -l "$TAG_PATTERN" | sort | tail -1
 }
 
 list_versions() {
     local current=$(get_current_version)
     echo "Available versions:"
-    git tag -l "$TAG_PATTERN" | sort | while read -r tag; do
+    git_cmd tag -l "$TAG_PATTERN" | sort | while read -r tag; do
         if [[ "$tag" == "$current" ]]; then
             echo "  $tag (current)"
         else
@@ -73,8 +73,8 @@ check_versions() {
 
     # Get defaults from git for comparison
     local default_media default_studio
-    default_media=$(git show HEAD:"$VERSIONS_FILE" 2>/dev/null | grep "^NORSK_MEDIA_IMAGE=" | sed 's/.*=//' || true)
-    default_studio=$(git show HEAD:"$VERSIONS_FILE" 2>/dev/null | grep "^NORSK_STUDIO_IMAGE=" | sed 's/.*=//' || true)
+    default_media=$(git_cmd show HEAD:"$VERSIONS_FILE" 2>/dev/null | grep "^NORSK_MEDIA_IMAGE=" | sed 's/.*=//' || true)
+    default_studio=$(git_cmd show HEAD:"$VERSIONS_FILE" 2>/dev/null | grep "^NORSK_STUDIO_IMAGE=" | sed 's/.*=//' || true)
 
     if [[ "$NORSK_MEDIA_IMAGE" == "$default_media" ]]; then
         echo "  Media:  ${NORSK_MEDIA_IMAGE#*:} (default)"
@@ -90,10 +90,10 @@ check_versions() {
 
     echo ""
     local changes
-    changes=$(git status --porcelain)
+    changes=$(git_cmd status --porcelain)
     if [[ -n "$changes" ]]; then
         echo "Local changes:"
-        git status --short
+        git_cmd status --short
     else
         echo "Local changes: none"
     fi
@@ -123,10 +123,10 @@ apply_update() {
 
     # Check for local changes
     local changed_files
-    changed_files=$(git status --porcelain | awk '{print $2}')
+    changed_files=$(git_cmd status --porcelain | awk '{print $2}')
     if [[ -n "$changed_files" ]]; then
         echo "Local changes detected:"
-        git status --short
+        git_cmd status --short
         echo ""
         echo "Options:"
         echo "  r) Reset - discard modified files"
@@ -148,10 +148,10 @@ apply_update() {
                         echo "Backed up: $file -> $backup"
                     fi
                 done <<< "$changed_files"
-                git checkout -- .
+                git_cmd checkout -- .
                 ;;
             r|R)
-                git checkout -- .
+                git_cmd checkout -- .
                 ;;
             *)
                 exit 1
@@ -160,18 +160,18 @@ apply_update() {
     fi
 
     # Check for custom container versions
-    if [[ -n "$(git diff --name-only $VERSIONS_FILE 2>/dev/null)" ]]; then
+    if [[ -n "$(git_cmd diff --name-only $VERSIONS_FILE 2>/dev/null)" ]]; then
         echo "Custom container versions in $VERSIONS_FILE"
         read -p "Reset to release defaults? [y/N] " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            git checkout "$VERSIONS_FILE"
+            git_cmd checkout "$VERSIONS_FILE"
         fi
     fi
 
     echo "Updating $current -> $target_version"
-    git fetch --tags --quiet
-    git -c advice.detachedHead=false checkout --quiet "$target_version" || oops "failed to checkout $target_version"
+    git_cmd fetch --tags --quiet
+    git_cmd -c advice.detachedHead=false checkout --quiet "$target_version" || oops "failed to checkout $target_version"
 
     # Pull updated containers
     echo ""
@@ -272,8 +272,8 @@ factory_reset() {
     echo
     [[ $REPLY =~ ^[Yy]$ ]] || exit 1
 
-    git checkout -- .
-    git clean -fd
+    git_cmd checkout -- .
+    git_cmd clean -fd
     echo "Reset complete."
 }
 
@@ -341,11 +341,11 @@ main() {
 
     case $action in
         current)
-            git fetch --tags --quiet 2>/dev/null || true
+            git_cmd fetch --tags --quiet 2>/dev/null || true
             check_versions
             ;;
         list-releases)
-            git fetch --tags --quiet
+            git_cmd fetch --tags --quiet
             list_versions
             ;;
         apply)
