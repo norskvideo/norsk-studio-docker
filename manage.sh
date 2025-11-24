@@ -189,11 +189,37 @@ apply_update() {
 }
 
 list_containers() {
+    get_container_config .
+    local current_media="${NORSK_MEDIA_IMAGE#*:}"
+    local current_studio="${NORSK_STUDIO_IMAGE#*:}"
+
+    # Get locally installed images
+    local installed_images
+    installed_images=$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null)
+
     echo "Norsk Media (norskvideo/norsk):"
-    list_docker_tags norsk | sed 's/^/  /'
+    list_docker_tags norsk | while read -r tag; do
+        local suffix=""
+        if [[ "$tag" == "$current_media" ]]; then
+            suffix=" (current)"
+        fi
+        if echo "$installed_images" | grep -q "^norskvideo/norsk:$tag$"; then
+            suffix="$suffix (installed)"
+        fi
+        echo "  $tag$suffix"
+    done
     echo ""
     echo "Norsk Studio (norskvideo/norsk-studio):"
-    list_docker_tags norsk-studio | sed 's/^/  /'
+    list_docker_tags norsk-studio | while read -r tag; do
+        local suffix=""
+        if [[ "$tag" == "$current_studio" ]]; then
+            suffix=" (current)"
+        fi
+        if echo "$installed_images" | grep -q "^norskvideo/norsk-studio:$tag$"; then
+            suffix="$suffix (installed)"
+        fi
+        echo "  $tag$suffix"
+    done
 }
 
 use_containers() {
