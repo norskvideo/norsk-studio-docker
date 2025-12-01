@@ -11,6 +11,7 @@ PLATFORM=""
 INSTALL_DIR="/var/norsk-studio"
 REPO_URL="https://github.com/norskvideo/norsk-studio-docker.git"
 REPO_BRANCH="git-mgt"
+DOWNLOAD_MEDIA="true"
 NORSK_LICENSE=""
 STUDIO_PASSWORD=""
 DOMAIN_NAME=""
@@ -27,6 +28,7 @@ OPTIONS:
   --platform=NAME       Platform: linode|google|oracle|local (auto-detected if omitted)
   --install-dir=PATH    Install directory (default: /var/norsk-studio)
   --repo-branch=BRANCH  Git branch to clone (default: git-mgt)
+  --download-media=BOOL Download example media files (default: true)
   --license=JSON        Norsk license JSON string (required)
   --password=PASS       Studio admin password (required)
   --domain=NAME         Optional domain name for deployment
@@ -62,6 +64,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --repo-branch=*)
       REPO_BRANCH="${1#*=}"
+      shift
+      ;;
+    --download-media=*)
+      DOWNLOAD_MEDIA="${1#*=}"
       shift
       ;;
     --license=*)
@@ -125,6 +131,7 @@ export PLATFORM
 export INSTALL_DIR
 export REPO_URL
 export REPO_BRANCH
+export DOWNLOAD_MEDIA
 export NORSK_LICENSE
 export STUDIO_PASSWORD
 export DOMAIN_NAME

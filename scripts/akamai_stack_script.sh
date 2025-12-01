@@ -28,15 +28,7 @@ git clone -b git-mgt https://github.com/norskvideo/norsk-studio-docker.git
 
 cd /var/norsk-studio/norsk-studio-docker
 
-# Download example media files if auto-detecting or explicitly quadra
-# (bootstrap.sh will detect actual hardware, but we can check for quadra presence early)
-if [[ "$HARDWARE" == "quadra" ]] || [[ "$HARDWARE" == "auto" && $(command -v lspci >/dev/null 2>&1 && lspci | grep -iq netint && echo "yes" || echo "no") == "yes" ]]; then
-  for source in action.mp4 wildlife.ts; do
-    curl --fail -L "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" -o "data/media/$source" || true
-  done
-fi
-
-# Run bootstrap script
+# Run bootstrap script (media download happens in 00-common.sh)
 ./scripts/bootstrap.sh \
   --hardware="$HARDWARE" \
   --platform=linode \

@@ -41,4 +41,21 @@ setup_common() {
 
   echo "Setting ownership..."
   chown -R norsk:norsk "$INSTALL_DIR"
+
+  # Download example media files
+  if [[ "${DOWNLOAD_MEDIA:-true}" == "true" ]]; then
+    echo "Downloading example media files..."
+    local media_dir="$INSTALL_DIR/norsk-studio-docker/data/media"
+    mkdir -p "$media_dir"
+    for source in action.mp4 wildlife.ts; do
+      if curl --fail -L "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" -o "$media_dir/$source"; then
+        echo "Downloaded: $source"
+      else
+        echo "Warning: Failed to download $source (continuing anyway)"
+      fi
+    done
+    chown -R norsk:norsk "$media_dir"
+  else
+    echo "Skipping media download (disabled)"
+  fi
 }
