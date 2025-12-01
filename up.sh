@@ -105,6 +105,8 @@ usage() {
     echo "      Generate merged compose file without starting"
     echo "  --quiet"
     echo "      Suppress output (for automation)"
+    echo "  --no-detach"
+    echo "      Run in foreground (e.g., for systemd services)"
     echo ""
     echo "Simple Mode Examples:"
     echo "  ./up.sh"
@@ -180,6 +182,7 @@ main() {
     local studioUrlFlag=""
     local pullOnly=false
     local quiet=false
+    local noDetach=false
 
     # Check for help before checking docker
     for arg in "$@"; do
@@ -403,6 +406,10 @@ main() {
                 quiet=true
                 shift 1
             ;;
+            --no-detach)
+                noDetach=true
+                shift 1
+            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
@@ -457,9 +464,10 @@ main() {
         envVars+=("STUDIO_URL_PREFIX")
     fi
 
-    # Apply --pull-only
     if [[ $pullOnly == true ]]; then
         action="pull"
+    elif [[ $noDetach == true ]]; then
+        action="up"
     fi
 
     # Validate log dirs

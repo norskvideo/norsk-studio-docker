@@ -7,7 +7,7 @@ After=norsk-setup.service
 User=root
 Restart=always
 WorkingDirectory=/var/norsk-studio/norsk-studio-docker
-ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh up
+ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh up --no-detach
 ExecStop=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh down
 ExecReload=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh exec nginx nginx -s reload
 
