@@ -12,6 +12,9 @@ source versions
 export NORSK_MEDIA_IMAGE
 export NORSK_STUDIO_IMAGE
 
+# TURN version (not in versions file as manage.sh doesn't manage it)
+export COTURN_VERSION=4.6.3-alpine
+
 declare NETWORK_MODE_DEFAULT
 declare LOCAL_TURN_DEFAULT
 
