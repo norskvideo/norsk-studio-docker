@@ -17,6 +17,8 @@ declare LOCAL_TURN_DEFAULT
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
+declare LOG_ROOT=${LOG_ROOT:-$(realpath "./logs")}
+
 # Detect platform and set defaults
 if [[ "$OSTYPE" == "linux"* ]]; then
     # Check if running in WSL
@@ -66,7 +68,7 @@ usage() {
     echo "  --enable-quadra"
     echo "      Enable Quadra GPU (Linux only)"
     echo "  --logs <dir>"
-    echo "      Mount Norsk Media logs to directory"
+    echo "      Logs will be written to <dir>/norsk-media and <dir>/norsk-studio directories (default ./logs)"
     echo "  --working-directory <dir>"
     echo "      Use custom data directory instead of ./data"
     echo "  --merge <file>"
@@ -136,6 +138,20 @@ main() {
     local toFile=""
     local -a envVars
 
+    local logSettings=""
+    local dataSettings=""
+    local urlPrefix=""
+    local studioUrlPrefix=""
+    local studioDocsUrl=""
+
+    # Check for help before checking docker
+    for arg in "$@"; do
+        if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+            usage
+            exit 0
+        fi
+    done
+
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
         echo "Error: No license.json file found at $licenseFilePath"
@@ -169,8 +185,6 @@ main() {
     local localTurn=$LOCAL_TURN_DEFAULT
     local nvidiaSettings=""
     local quadraSettings=""
-    local logSettings=""
-    local dataSettings=""
     local workflow=""
     local overrides=""
     while [[ $# -gt 0 ]]; do
@@ -254,16 +268,7 @@ main() {
                     usage
                     exit 1
                 fi
-                if ! mkdir -p "$2" 2>/dev/null; then
-                    echo "Error: Cannot create logs directory: $2"
-                    exit 1
-                fi
-                if [[ ! -w "$2" ]]; then
-                    echo "Error: Logs directory is not writable: $2"
-                    exit 1
-                fi
                 export LOG_ROOT=$(realpath "$2")
-                logSettings="-f yaml/volumes/norsk-media-logs.yaml"
                 shift 2
             ;;
             --working-directory)
@@ -295,7 +300,23 @@ main() {
             ;;
             --enable-quadra)
                 if [[ "$OSTYPE" == "linux"* ]]; then
-                    quadraSettings="-f yaml/hardware-devices/quadra.yaml"
+                    if [[ -z "${NORSK_USER:-}" ]]; then
+  # These need to be set as ids because they are
+  # names on the host system, not inside the container
+  export NORSK_USER=$(id -u norsk 2>/dev/null)
+
+  if [[ -z "${NORSK_GROUP:-}" && -n "$NORSK_USER" ]]; then
+    # Prefer the disk group if norsk is a member
+    # (For hardware access, e.g. Netint Quadra)
+    if id -nG norsk | grep -qw disk; then
+      export NORSK_GROUP=$(getent group disk | cut -d: -f3)
+    else
+      # Otherwise the default group (aka norsk)
+      export NORSK_GROUP=$(id -g norsk)
+    fi
+  fi
+fi
+                    quadraSettings="-f yaml/hardware-devices/quadra.yaml -f yaml/norsk-users.yaml"
                     shift 1
                 else
                     echo "quadra is not supported on $OSTYPE"
@@ -309,6 +330,16 @@ main() {
                 exit 1
         esac
     done
+
+    # Validate log dirs
+    if ! mkdir -p "$LOG_ROOT/norsk-media" "$LOG_ROOT/norsk-studio" 2>/dev/null; then
+        echo "Error: Cannot create logs directory: $LOG_ROOT"
+        exit 1
+    fi
+    if [[ ! -w "$LOG_ROOT/norsk-media" || ! -w "$LOG_ROOT/norsk-studio" ]]; then
+        echo "Error: Logs directory is not writable: $2"
+        exit 1
+    fi
 
     # Validate workflow file - must be in data/studio-save-files/
     local validated_workflow=""
@@ -331,6 +362,7 @@ main() {
 
     local -r studioSettings="-f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml"
     local -r norskMediaSettings="-f yaml/servers/norsk-media.yaml -f yaml/$networkDir/norsk-media.yaml"
+
 
     local turnSettings=""
     if [[ $localTurn == "true" ]]; then
@@ -366,7 +398,7 @@ main() {
     ./down.sh
 
     # Build docker compose arguments once
-    local -a composeArgs=($norskMediaSettings $logSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
+    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
 
     echo "Containers:"
     echo "  Media:  ${NORSK_MEDIA_IMAGE#*:}"

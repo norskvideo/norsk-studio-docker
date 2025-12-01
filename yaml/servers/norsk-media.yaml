@@ -15,6 +15,7 @@ services:
     restart: always
     volumes:
       - ${DATA_ROOT:-../../data}:/data
+      - ${LOG_ROOT:-../../logs}/norsk-media:/var/log/norsk
       - ../../secrets:/data/secrets:ro
       - /dev/shm:/dev/shm/
     healthcheck:

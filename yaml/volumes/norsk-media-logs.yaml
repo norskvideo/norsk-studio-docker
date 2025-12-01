@@ -1,4 +1,0 @@
-services:
-  norsk-media:
-    volumes:
-      - ${LOG_ROOT}:/var/log/norsk

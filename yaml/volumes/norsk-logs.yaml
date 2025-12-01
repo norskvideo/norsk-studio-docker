@@ -1,7 +1,0 @@
-services:
-  norsk-media:
-    volumes:
-      - ${DEPLOY_LOGS}/norsk-media:/var/log/norsk
-  norsk-studio:
-    volumes:
-      - ${DEPLOY_LOGS}/norsk-studio:/usr/src/app/logs
