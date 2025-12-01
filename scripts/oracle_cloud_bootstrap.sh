@@ -15,10 +15,7 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-# Clone repo and run bootstrap script
-curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-sh /tmp/get-docker.sh
-
+# Install git and clone repo
 apt-get update
 apt-get install -y git
 

@@ -184,9 +184,12 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 - Rewrote oracle_cloud_bootstrap.sh: 72 lines → 37 lines (bootstrap.sh call)
 - All stackscripts now minimal bootstrappers calling scripts/bootstrap.sh
 
-**Phase 4 enhancement complete**
+**Phase 4 enhancements complete**
 - Unified akamai_stack_script.sh and akamai_quadra_stack_script.sh into single script
-- Added hardware UDF (none/quadra), conditional media downloads, conditional reboot
+- Added hardware UDF (auto/none/quadra), auto-detection via lspci
+- Moved media downloads to 00-common.sh with --download-media flag
+- Removed Docker install from stackscripts (now only in 00-common.sh)
+- Stackscripts now minimal: git install, clone, run bootstrap.sh
 - Deleted akamai_quadra_stack_script.sh
 
 **Phase 5 complete**
