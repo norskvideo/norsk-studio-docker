@@ -200,7 +200,8 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 
 ## Lessons
 
-*None yet - execution phase not started*
+- **set -e and conditional echo**: `[[ -n "$VAR" ]] && echo` fails with set -e when VAR unset. Use explicit `if [[ -n "${VAR:-}" ]]; then echo; fi` instead
+- **Quadra detection**: `lspci | grep -iq netint` detects Netint Quadra hardware
 
 ## Decisions
 

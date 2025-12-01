@@ -35,5 +35,7 @@ HEREDOC
   chown norsk:norsk "$platform_dir/norsk-config.sh"
 
   echo "Platform IP: $DEPLOY_PUBLIC_IP"
-  [[ -n "$DOMAIN_NAME" ]] && echo "Domain: $DOMAIN_NAME"
+  if [[ -n "${DOMAIN_NAME:-}" ]]; then
+    echo "Domain: $DOMAIN_NAME"
+  fi
 }

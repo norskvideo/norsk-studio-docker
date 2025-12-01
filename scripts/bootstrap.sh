@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Defaults
-HARDWARE="none"
+HARDWARE="auto"
 PLATFORM=""
 INSTALL_DIR="/var/norsk-studio"
 REPO_URL="https://github.com/norskvideo/norsk-studio-docker.git"
@@ -23,7 +23,7 @@ Usage: $0 [OPTIONS]
 Unattended installation of Norsk Studio for cloud deployments.
 
 OPTIONS:
-  --hardware=TYPE       Hardware profile: none|quadra|nvidia (default: none)
+  --hardware=TYPE       Hardware profile: auto|none|quadra|nvidia (default: auto)
   --platform=NAME       Platform: linode|google|oracle|local (auto-detected if omitted)
   --install-dir=PATH    Install directory (default: /var/norsk-studio)
   --repo-branch=BRANCH  Git branch to clone (default: git-mgt)
@@ -102,9 +102,21 @@ if [[ -z "$STUDIO_PASSWORD" ]]; then
   exit 1
 fi
 
-if [[ ! "$HARDWARE" =~ ^(none|quadra|nvidia)$ ]]; then
-  echo "Error: --hardware must be one of: none, quadra, nvidia" >&2
+if [[ ! "$HARDWARE" =~ ^(auto|none|quadra|nvidia)$ ]]; then
+  echo "Error: --hardware must be one of: auto, none, quadra, nvidia" >&2
   exit 1
+fi
+
+# Auto-detect hardware if requested
+if [[ "$HARDWARE" == "auto" ]]; then
+  echo "Auto-detecting hardware..."
+  if command -v lspci >/dev/null 2>&1 && lspci | grep -iq netint; then
+    HARDWARE="quadra"
+    echo "Detected: Netint Quadra"
+  else
+    HARDWARE="none"
+    echo "Detected: No hardware acceleration"
+  fi
 fi
 
 # Export for use by modules
