@@ -33,6 +33,8 @@ action_flag=""
 if [[ "${1:-}" == "pull" ]]; then
     action_flag="--pull-only"
     shift
+elif [[ "${1:-}" == "up" ]]; then
+    shift
 elif [[ "${1:-}" == "down" ]]; then
     exec ./down.sh
 fi

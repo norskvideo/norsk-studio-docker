@@ -100,6 +100,8 @@ usage() {
     echo "      Pull container images without starting"
     echo "  --merge <file>"
     echo "      Generate merged compose file without starting"
+    echo "  --quiet"
+    echo "      Suppress output (for automation)"
     echo ""
     echo "Simple Mode Examples:"
     echo "  ./up.sh"
@@ -174,6 +176,7 @@ main() {
     local publicUrlFlag=""
     local studioUrlFlag=""
     local pullOnly=false
+    local quiet=false
 
     # Check for help before checking docker
     for arg in "$@"; do
@@ -393,6 +396,10 @@ main() {
                 pullOnly=true
                 shift 1
             ;;
+            --quiet)
+                quiet=true
+                shift 1
+            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
@@ -523,7 +530,11 @@ main() {
     ./down.sh
 
     # Build docker compose arguments once
-    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action)
+    local quietFlag=""
+    if [[ "$quiet" == true ]]; then
+        quietFlag="--quiet-pull"
+    fi
+    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $quietFlag $action)
 
     echo "Containers:"
     echo "  Media:  ${NORSK_MEDIA_IMAGE#*:}"
