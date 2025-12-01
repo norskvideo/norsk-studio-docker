@@ -532,9 +532,9 @@ main() {
     # Build docker compose arguments once
     local quietFlag=""
     if [[ "$quiet" == true ]]; then
-        quietFlag="--quiet-pull"
+        quietFlag="--quiet"
     fi
-    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $quietFlag $action)
+    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action $quietFlag)
 
     echo "Containers:"
     echo "  Media:  ${NORSK_MEDIA_IMAGE#*:}"
