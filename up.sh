@@ -172,10 +172,10 @@ main() {
         echo "Warning: HOST_IP env var is deprecated, use --host-ip flag instead" >&2
     fi
     if [[ -n "${PUBLIC_URL_PREFIX:-}" ]]; then
-        echo "Warning: PUBLIC_URL_PREFIX env var is deprecated, use --url-prefix flag instead" >&2
+        echo "Warning: PUBLIC_URL_PREFIX env var is deprecated, use --public-url flag instead" >&2
     fi
     if [[ -n "${STUDIO_URL_PREFIX:-}" ]]; then
-        echo "Warning: STUDIO_URL_PREFIX env var is deprecated, use --studio-url-prefix flag instead" >&2
+        echo "Warning: STUDIO_URL_PREFIX env var is deprecated, use --studio-url flag instead" >&2
     fi
     if [[ -n "${GLOBAL_ICE_SERVERS:-}" ]]; then
         echo "Warning: GLOBAL_ICE_SERVERS env var is deprecated, use --ice-servers flag instead" >&2
@@ -417,6 +417,13 @@ fi
     fi
     if [[ -n "$studioUrlFlag" && -z "$publicUrlFlag" ]]; then
         echo "Error: --studio-url requires --public-url"
+        usage
+        exit 1
+    fi
+
+    # Validate --merge and --pull-only are mutually exclusive
+    if [[ $pullOnly == true && -n "$toFile" ]]; then
+        echo "Error: --pull-only and --merge are mutually exclusive"
         usage
         exit 1
     fi
