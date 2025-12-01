@@ -3,17 +3,17 @@ __layout:
     x: 304
     y: 32
   - id: abr_ladder
-    x: 1296
-    y: -176
-  - id: ll-hls
-    x: 1824
-    y: 32
-  - id: source_switcher
-    x: 816
-    y: 32
+    x: 1072
+    y: -192
   - id: preview
-    x: 1296
-    y: 160
+    x: 1072
+    y: 240
+  - id: smart_source_switch
+    x: 672
+    y: 32
+  - id: ll-hls
+    x: 1600
+    y: 32
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -159,41 +159,31 @@ components:
               seconds: 1
       id: abr_ladder
     subscriptions:
-      - source: source_switcher
+      - source: smart_source_switch
         streams:
           type: take-first-stream
           filter:
             - media: video
-  - type: output.autoCmaf
+  - type: output.preview
     config:
-      displayName: LL-HLS
-      name: default
-      sessionId: false
-      segments:
-        retentionPeriod: 60
-        defaultSegmentCount: 0
-        targetSegmentDuration: 4
-        targetPartDuration: 1
-      destinations: []
-      initialState: enabled
-      multiplePrograms: false
+      displayName: Preview
+      previewMode: image
+      showPreview: true
+      jitterBuffer:
+        bufferDelayMs: 500
       notes: ""
-      id: ll-hls
+      makeProgram: true
+      id: preview
     subscriptions:
-      - source: abr_ladder
-        streams:
-          type: take-all-streams
-          filter:
-            - media: video
-      - source: source_switcher
+      - source: smart_source_switch
         streams:
           type: take-first-stream
           filter:
+            - media: video
             - media: audio
-  - type: processor.sourceSwitcher
+  - type: processor.smartSourceSwitch
     config:
-      displayName: Source Switcher
-      enablePreviews: true
+      displayName: Smart Source Switch
       resolution:
         width: 1280
         height: 720
@@ -202,8 +192,13 @@ components:
         seconds: 1
       sampleRate: 48000
       channelLayout: stereo
+      sources:
+        - camera1
+        - camera2
+      fallback:
+        kind: testcard
       notes: ""
-      id: source_switcher
+      id: smart_source_switch
     subscriptions:
       - source: srt_input
         streams:
@@ -211,18 +206,41 @@ components:
           filter:
             - media: video
             - media: audio
-  - type: output.preview
+  - type: output.autoCmaf
     config:
-      displayName: preview
-      previewMode: image
-      showPreview: true
-      bufferDelayMs: 500
+      displayName: LL-HLS
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        audioSegmentStrategy:
+          type: default
+        videoSegmentStrategy:
+          type: default
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      pdtEverySegment: true
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
       notes: ""
-      id: preview
+      makeProgram: true
+      id: ll-hls
     subscriptions:
-      - source: source_switcher
+      - source: abr_ladder
         streams:
-          type: take-first-stream
+          type: take-all-streams
           filter:
             - media: video
+      - source: smart_source_switch
+        streams:
+          type: take-specific-streams
+          filter:
             - media: audio
+              displayName: Smart Source Switch - audio
+              sourceName: smart_source_switch

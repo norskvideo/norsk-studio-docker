@@ -2,14 +2,11 @@ __layout:
   - id: test_card
     x: 704
     y: 208
-  - id: silence
-    x: 704
-    y: 592
-  - id: norsk_graphic
-    x: 1232
-    y: 208
   - id: output_preview
     x: 1776
+    y: 208
+  - id: norsk_graphic
+    x: 1184
     y: 208
 __globalConfig: {}
 components:
@@ -26,31 +23,6 @@ components:
       notes: ""
       id: test_card
     subscriptions: []
-  - type: input.audioSignal
-    config:
-      displayName: Silence
-      sampleRate: 48000
-      channelLayout: stereo
-      wave:
-        type: silence
-      notes: Migrated from input.silence to input.audioSignal
-      id: silence
-    subscriptions: []
-  - type: processor.onscreenGraphic
-    config:
-      displayName: Norsk Graphic
-      initialGraphic: Norsk.png
-      initialPosition:
-        type: named
-        position: bottomright
-      notes: ""
-      id: norsk_graphic
-    subscriptions:
-      - source: test_card
-        streams:
-          type: take-first-stream
-          filter:
-            - media: video
   - type: output.preview
     config:
       displayName: Output Preview
@@ -65,8 +37,18 @@ components:
           type: take-first-stream
           filter:
             - media: video
-      - source: silence
+  - type: processor.onscreenGraphic
+    config:
+      displayName: Norsk Graphic
+      initialFilename: graphics/Norsk.png
+      initialPosition:
+        type: named
+        position: bottomright
+      notes: ""
+      id: norsk_graphic
+    subscriptions:
+      - source: test_card
         streams:
           type: take-first-stream
           filter:
-            - media: audio
+            - media: video

@@ -5,15 +5,15 @@ __layout:
   - id: abr_ladder
     x: 1456
     y: 32
-  - id: ll-hls
-    x: 1872
-    y: 304
-  - id: on_screen_graphic
-    x: 1008
-    y: 32
   - id: output_preview
-    x: 1456
-    y: 448
+    x: 1312
+    y: 496
+  - id: on_screengraphic
+    x: 960
+    y: 160
+  - id: ll-hls
+    x: 1824
+    y: 224
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -158,48 +158,7 @@ components:
               seconds: 1
       id: abr_ladder
     subscriptions:
-      - source: on_screen_graphic
-        streams:
-          type: take-first-stream
-          filter:
-            - media: video
-  - type: output.autoCmaf
-    config:
-      displayName: LL-HLS
-      name: default
-      sessionId: false
-      segments:
-        retentionPeriod: 60
-        defaultSegmentCount: 0
-        targetSegmentDuration: 4
-        targetPartDuration: 1
-      destinations: []
-      initialState: enabled
-      multiplePrograms: false
-      notes: ""
-      id: ll-hls
-    subscriptions:
-      - source: abr_ladder
-        streams:
-          type: take-all-streams
-          filter:
-            - media: video
-      - source: srt_input
-        streams:
-          type: take-all-streams
-          filter:
-            - media: audio
-  - type: processor.onscreenGraphic
-    config:
-      displayName: On Screen Graphic
-      initialGraphic: Norsk.png
-      initialPosition:
-        type: named
-        position: topleft
-      notes: ""
-      id: on_screen_graphic
-    subscriptions:
-      - source: srt_input
+      - source: on_screengraphic
         streams:
           type: take-first-stream
           filter:
@@ -213,13 +172,69 @@ components:
       notes: ""
       id: output_preview
     subscriptions:
-      - source: on_screen_graphic
-        streams:
-          type: take-first-stream
-          filter:
-            - media: video
       - source: srt_input
         streams:
           type: take-first-stream
           filter:
             - media: audio
+      - source: on_screengraphic
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: processor.onscreenGraphic
+    config:
+      displayName: On ScreenGraphic
+      initialFilename: graphics/Norsk.png
+      initialPosition:
+        type: named
+        position: topleft
+      notes: ""
+      id: on_screengraphic
+    subscriptions:
+      - source: srt_input
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: output.autoCmaf
+    config:
+      displayName: LL-HLS
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        audioSegmentStrategy:
+          type: default
+        videoSegmentStrategy:
+          type: default
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      pdtEverySegment: true
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      makeProgram: true
+      id: ll-hls
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: srt_input
+        streams:
+          type: take-specific-streams
+          filter:
+            - media: audio
+              displayName: camera1 Audio
+              sourceName: camera1
+              programNumber: 1
+              streamId: 257
+              renditionName: default
