@@ -37,6 +37,22 @@ if [[ "$OSTYPE" == "linux"* ]]; then
         NETWORK_MODE_DEFAULT="host"
         LOCAL_TURN_DEFAULT=false
     fi
+
+    # Set user/group for hardware access on Linux/WSL2
+    # These need to be set as IDs because they are names on the host system, not inside the container
+    if [[ -z "${NORSK_USER:-}" ]]; then
+        export NORSK_USER=$(id -u)
+
+        if [[ -z "${NORSK_GROUP:-}" ]]; then
+            # Prefer the disk group if current user is a member (for hardware access, e.g. Netint Quadra)
+            if id -nG | grep -qw disk; then
+                export NORSK_GROUP=$(getent group disk | cut -d: -f3)
+            else
+                # Otherwise use the default group
+                export NORSK_GROUP=$(id -g)
+            fi
+        fi
+    fi
 else
     # macOS uses docker mode
     NETWORK_MODE_DEFAULT="docker"
@@ -73,7 +89,7 @@ usage() {
     echo "  --overrides <file>"
     echo "      Apply workflow overrides (in data/studio-save-files/)"
     echo "  --enable-nvidia"
-    echo "      Enable NVIDIA GPU (Linux only)"
+    echo "      Enable NVIDIA GPU (Linux/WSL2 only)"
     echo "  --enable-quadra"
     echo "      Enable Quadra GPU (Linux only)"
     echo "  --logs <dir>"
@@ -319,7 +335,7 @@ main() {
             ;;
             --enable-nvidia)
                 if [[ "$OSTYPE" == "linux"* ]]; then
-                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
+                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml -f yaml/norsk-users.yaml"
                     shift 1
                 else
                     echo "nvidia is not supported on $OSTYPE"
@@ -329,22 +345,6 @@ main() {
             ;;
             --enable-quadra)
                 if [[ "$OSTYPE" == "linux"* ]]; then
-                    if [[ -z "${NORSK_USER:-}" ]]; then
-  # These need to be set as ids because they are
-  # names on the host system, not inside the container
-  export NORSK_USER=$(id -u norsk 2>/dev/null)
-
-  if [[ -z "${NORSK_GROUP:-}" && -n "$NORSK_USER" ]]; then
-    # Prefer the disk group if norsk is a member
-    # (For hardware access, e.g. Netint Quadra)
-    if id -nG norsk | grep -qw disk; then
-      export NORSK_GROUP=$(getent group disk | cut -d: -f3)
-    else
-      # Otherwise the default group (aka norsk)
-      export NORSK_GROUP=$(id -g norsk)
-    fi
-  fi
-fi
                     quadraSettings="-f yaml/hardware-devices/quadra.yaml -f yaml/norsk-users.yaml"
                     shift 1
                 else
