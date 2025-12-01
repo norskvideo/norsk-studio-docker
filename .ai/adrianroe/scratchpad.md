@@ -127,29 +127,29 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 - [x] Implement 30-containers.sh (docker pulls)
 - [x] Test bootstrap.sh argument parsing
 
-### Phase 2: Hardware Profile System
-- [ ] Create scripts/hardware/ directory
-- [ ] Extract quadra.sh from stackscript
-- [ ] Create none.sh profile
-- [ ] Create nvidia.sh stub
-- [ ] Integrate hardware selection into bootstrap.sh
+### Phase 2: Hardware Profile System ✓
+- [x] Create scripts/hardware/ directory
+- [x] Extract quadra.sh from stackscript
+- [x] Create none.sh profile
+- [x] Create nvidia.sh stub
+- [x] Integrate hardware selection into bootstrap.sh (already in bootstrap.sh)
 
-### Phase 3: Platform Config Unification
-- [ ] Create scripts/platforms/ directory
-- [ ] Implement linode.sh
-- [ ] Implement google.sh
-- [ ] Implement oracle.sh
-- [ ] Implement local.sh
+### Phase 3: Platform Config Unification ✓
+- [x] Create scripts/platforms/ directory
+- [x] Implement linode.sh
+- [x] Implement google.sh
+- [x] Implement oracle.sh
+- [x] Implement local.sh
 
-### Phase 4: Minimize Stackscripts
-- [ ] Rewrite akamai_stack_script.sh
-- [ ] Rewrite akamai_quadra_stack_script.sh
-- [ ] Rewrite oracle_cloud_bootstrap.sh
+### Phase 4: Minimize Stackscripts ✓
+- [x] Rewrite akamai_stack_script.sh
+- [x] Rewrite akamai_quadra_stack_script.sh
+- [x] Rewrite oracle_cloud_bootstrap.sh
 
-### Phase 5: Testing Infrastructure
-- [ ] Create test/install/ framework
-- [ ] Add docker-based test runner
-- [ ] Add hardware profile mocking
+### Phase 5: Testing Infrastructure ✓
+- [x] Create test/install/ framework
+- [x] Add docker-based test runner
+- [x] Add hardware profile mocking
 
 ### Phase 6: Documentation
 - [ ] Write bootstrap.sh usage docs
@@ -162,9 +162,41 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 - Created bootstrap.sh with arg parsing, validation, module loading
 - Created lib modules: 00-common (docker/user/deps), 10-secrets (license/password), 20-platform (config), 30-containers (pulls)
 - Arg parsing tested and validated
-- Note: Platform scripts (scripts/platforms/*.sh) and hardware profiles (scripts/hardware/*.sh) needed for Phase 2/3
 
-**Ready for Phase 2 or Phase 3** - which next?
+**Phase 3 complete**
+- Created scripts/platforms/ directory
+- Implemented linode.sh (IP from eth0, UDF vars)
+- Implemented google.sh (IP from metadata, reads domain/email from metadata)
+- Implemented oracle.sh (IP from checkip.amazonaws.com, iptables TODO, oauth2 matches Linode)
+- Implemented local.sh (localhost, port forwarding support)
+- All platform scripts generate norsk-config.sh in deployed/{Platform}/
+
+**Phase 2 complete**
+- Created scripts/hardware/ directory
+- Extracted quadra.sh (downloads, builds libxcoder, usermod disk group, systemd service)
+- Created none.sh (noop for software-only)
+- Created nvidia.sh (stub with TODO, exits with error)
+- Hardware integration already present in bootstrap.sh (lines 160-166)
+
+**Phase 4 complete**
+- Rewrote akamai_stack_script.sh: 64 lines → 36 lines (docker, git, clone, bootstrap.sh call)
+- Rewrote akamai_quadra_stack_script.sh: 108 lines → 44 lines (includes media downloads, bootstrap.sh --hardware=quadra)
+- Rewrote oracle_cloud_bootstrap.sh: 72 lines → 37 lines (bootstrap.sh call)
+- All stackscripts now minimal bootstrappers calling scripts/bootstrap.sh
+
+**Phase 4 enhancement complete**
+- Unified akamai_stack_script.sh and akamai_quadra_stack_script.sh into single script
+- Added hardware UDF (none/quadra), conditional media downloads, conditional reboot
+- Deleted akamai_quadra_stack_script.sh
+
+**Phase 5 complete**
+- Created test/install/ framework with README
+- Created test-args.sh (validates parsing, checks file existence)
+- Created Dockerfile.test and test-docker.sh (Ubuntu container tests)
+- Created mock-hardware/{quadra,nvidia}.sh for testing without hardware
+- Tests validate: arg parsing, help output, module syntax, file existence
+
+**Ready for Phase 6** (documentation)?
 
 ## Lessons
 
