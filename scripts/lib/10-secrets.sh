@@ -13,10 +13,12 @@ setup_secrets() {
   chmod 600 "$repo_dir/secrets/license.json"
 
   echo "Generating password hash..."
-  mkdir -p "$repo_dir/support/oauth2/secrets"
+  local htp_dir="$repo_dir/support/oauth2/secrets"
+  local htpasswd_file="$htp_dir/.htpasswd"
+  mkdir -p "$htp_dir"
   (set +x; printf '%s' "$STUDIO_PASSWORD") \
     | docker run --rm -i xmartlabs/htpasswd@sha256:fac862e543f80d72386492aa87b0f6f3c1c06a49a845e553ebea91750ce6320c -i norsk-studio-admin \
-    > "$repo_dir/support/oauth2/secrets/.htpasswd"
-  chown norsk:norsk "$repo_dir/support/oauth2/secrets/.htpasswd"
-  chmod 600 "$repo_dir/support/oauth2/secrets/.htpasswd"
+    > "$htpasswd_file"
+  chown norsk:norsk "$htpasswd_file"
+  chmod 644 "$htpasswd_file"
 }
