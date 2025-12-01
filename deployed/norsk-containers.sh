@@ -1,55 +1,60 @@
 #!/usr/bin/env bash
+set -eo pipefail
+
+# Thin wrapper for cloud deployment
+# Sources cloud config and calls up.sh with appropriate flags
+
 source "$(dirname "$0")/norsk-config.sh"
-source "$(dirname "$0")/versions"
 cd "$(dirname "$0")/.." || exit 1
 
-export PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-https://$DEPLOY_HOSTNAME/norsk}
-export STUDIO_URL_PREFIX=${STUDIO_URL_PREFIX:-/studio}
-export STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-https://$DEPLOY_HOSTNAME/docs/studio/latest/index.html}
-if [[ -z "${NORSK_USER:-}" ]]; then
-  # These need to be set as ids because they are
-  # names on the host system, not inside the container
-  export NORSK_USER=$(id -u norsk 2>/dev/null)
-
-  if [[ -z "${NORSK_GROUP:-}" && -n "$NORSK_USER" ]]; then
-    # Prefer the disk group if norsk is a member
-    # (For hardware access, e.g. Netint Quadra)
-    if id -nG norsk | grep -qw disk; then
-      export NORSK_GROUP=$(getent group disk | cut -d: -f3)
-    else
-      # Otherwise the default group (aka norsk)
-      export NORSK_GROUP=$(id -g norsk)
-    fi
-  fi
+# Calculate ICE servers with STUN fallback for cloud deployment
+if [[ -n "${DEPLOY_PUBLIC_IP:-}" ]]; then
+    ice_servers='[
+  {"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$DEPLOY_PUBLIC_IP':3478", "username": "norsk", "credential": "norsk"},
+  {"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$DEPLOY_PUBLIC_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk"},
+  {"url": "stun:127.0.0.1:3478", "reportedUrl": "stun:stun.l.google.com:19302"}
+]'
+else
+    ice_servers=""
 fi
 
-# Set up configuration for coturn
-# TODO: configure hostIps (Norsk), external-ip (coturn)?
-# TODO: secure turns:/stuns:?
-if [[ -z "${GLOBAL_ICE_SERVERS:-}" && -n "${DEPLOY_PUBLIC_IP:-}" ]]; then
-  # Include the public Google STUN server as a fallback in case
-  # port 3478 is firewalled off...
-  export GLOBAL_ICE_SERVERS='[{ "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$DEPLOY_PUBLIC_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$DEPLOY_PUBLIC_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }, { "url": "stun:127.0.0.1:3478", "reportedUrl": "stun:stun.l.google.com:19302" }]'
-fi
-
-if [[ "${1:-}" = "up" || "${1:-}" = "start" ]]; then
-  bash ./deployed/check-setup.sh
-fi
-
-networkDir="networking/host"
-
-declare -a composeFiles
-composeFiles=(
-  -f yaml/servers/norsk-media.yaml -f yaml/$networkDir/norsk-media.yaml
-  -f yaml/servers/norsk-studio.yaml -f yaml/$networkDir/norsk-studio.yaml
-  -f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml
-  -f yaml/norsk-users.yaml
-  -f yaml/volumes/norsk-logs.yaml
-)
+# Extract hardware type from DEPLOY_HARDWARE path
+hw_flag=""
 if [[ -n "${DEPLOY_HARDWARE:-}" ]]; then
-  composeFiles+=(
-    -f "$DEPLOY_HARDWARE"
-  )
+    if [[ "$DEPLOY_HARDWARE" == *"quadra"* ]]; then
+        hw_flag="--enable-quadra"
+    elif [[ "$DEPLOY_HARDWARE" == *"nvidia"* ]]; then
+        hw_flag="--enable-nvidia"
+    fi
 fi
 
-docker compose "${composeFiles[@]}" "$@"
+# Translate old interface: pull/up/down actions
+action_flag=""
+if [[ "${1:-}" == "pull" ]]; then
+    action_flag="--pull-only"
+    shift
+elif [[ "${1:-}" == "down" ]]; then
+    exec ./down.sh
+fi
+
+# Build up.sh arguments
+args=(
+    --network-mode host
+    --public-url "${PUBLIC_URL_PREFIX:-https://$DEPLOY_HOSTNAME/norsk}"
+    --studio-url "${STUDIO_URL_PREFIX:-https://$DEPLOY_HOSTNAME/studio}"
+)
+
+if [[ -n "$ice_servers" ]]; then
+    args+=(--ice-servers "$ice_servers")
+fi
+
+if [[ -n "$hw_flag" ]]; then
+    args+=($hw_flag)
+fi
+
+if [[ -n "$action_flag" ]]; then
+    args+=($action_flag)
+fi
+
+# Call up.sh with cloud configuration
+./up.sh "${args[@]}" "$@"

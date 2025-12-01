@@ -49,43 +49,51 @@ usage() {
     echo ""
     echo "Start Norsk Studio with Docker Compose"
     echo ""
-    echo "Options:"
-    echo "  --network-mode [docker|host]"
-    echo "      Docker: containers use internal networking (default macOS/WSL2)"
-    echo "      Host: containers use host network (default Linux, faster)"
+    echo "Simple Mode (auto-configuration):"
+    echo "  --host-ip <ip>"
+    echo "      Host IP for UI access and stream URLs (default: 127.0.0.1)"
+    echo "      Auto-configures PUBLIC_URL_PREFIX and ICE servers"
     echo "  --turn [true|false]"
     echo "      Launch local TURN server (default: $LOCAL_TURN_DEFAULT)"
+    echo ""
+    echo "Advanced Mode (explicit control, cannot use with --host-ip):"
+    echo "  --ice-servers <json>"
+    echo "      Explicit ICE servers JSON array"
+    echo "  --public-url <url>"
+    echo "      Explicit PUBLIC_URL_PREFIX (requires --studio-url)"
+    echo "  --studio-url <url>"
+    echo "      Explicit STUDIO_URL_PREFIX (requires --public-url)"
+    echo ""
+    echo "Common Options:"
+    echo "  --network-mode [docker|host]"
+    echo "      Docker: internal networking (default macOS/WSL2)"
+    echo "      Host: host network (default Linux)"
     echo "  --workflow <file>"
-    echo "      Load specific workflow at startup"
-    echo "      File must be in data/studio-save-files/ directory"
-    echo "      Can specify just filename or full path"
+    echo "      Load workflow at startup (in data/studio-save-files/)"
     echo "  --overrides <file>"
-    echo "      Apply workflow overrides"
-    echo "      File must be in data/studio-save-files/ directory"
-    echo "      Can specify just filename or full path"
+    echo "      Apply workflow overrides (in data/studio-save-files/)"
     echo "  --enable-nvidia"
     echo "      Enable NVIDIA GPU (Linux only)"
     echo "  --enable-quadra"
     echo "      Enable Quadra GPU (Linux only)"
     echo "  --logs <dir>"
-    echo "      Logs will be written to <dir>/norsk-media and <dir>/norsk-studio directories (default ./logs)"
+    echo "      Logs directory (default ./logs)"
     echo "  --working-directory <dir>"
-    echo "      Use custom data directory instead of ./data"
+    echo "      Custom data directory (default ./data)"
+    echo "  --pull-only"
+    echo "      Pull container images without starting"
     echo "  --merge <file>"
     echo "      Generate merged compose file without starting"
     echo ""
-    echo "Environment:"
-    echo "  HOST_IP - IP/hostname for UI access and stream URLs"
-    echo "            On a cloud server it can be set to the public IP"
-    echo "            (default: 127.0.0.1)"
-    echo ""
-    echo "Examples:"
+    echo "Simple Mode Examples:"
     echo "  ./up.sh"
-    echo "  ./up.sh --workflow 01-SRT-to-HLS-Ladder.yaml"
-    echo "  ./up.sh --workflow data/studio-save-files/02-Test-Card.yaml"
-    echo "  ./up.sh --workflow MyWorkflow.yaml --overrides my-overrides.yaml"
-    echo "  HOST_IP=192.168.1.100 ./up.sh --turn true"
-    echo "  HOST_IP=\$(curl -s ifconfig.me) ./up.sh"
+    echo "  ./up.sh --host-ip 192.168.1.100 --turn true"
+    echo "  ./up.sh --host-ip \$(curl -s ifconfig.me) --turn true"
+    echo ""
+    echo "Advanced Mode Examples:"
+    echo "  ./up.sh --public-url 'https://example.com/norsk' \\"
+    echo "          --studio-url 'https://example.com/studio' \\"
+    echo "          --ice-servers '[{\"url\":\"turn:...\"}]'"
 }
 
 realpath() {
@@ -144,6 +152,13 @@ main() {
     local studioUrlPrefix=""
     local studioDocsUrl=""
 
+    # Simple vs advanced mode flags
+    local hostIpFlag=""
+    local iceServersFlag=""
+    local publicUrlFlag=""
+    local studioUrlFlag=""
+    local pullOnly=false
+
     # Check for help before checking docker
     for arg in "$@"; do
         if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
@@ -151,6 +166,20 @@ main() {
             exit 0
         fi
     done
+
+    # Warn about deprecated env vars
+    if [[ -n "${HOST_IP:-}" && "$HOST_IP" != "127.0.0.1" ]]; then
+        echo "Warning: HOST_IP env var is deprecated, use --host-ip flag instead" >&2
+    fi
+    if [[ -n "${PUBLIC_URL_PREFIX:-}" ]]; then
+        echo "Warning: PUBLIC_URL_PREFIX env var is deprecated, use --url-prefix flag instead" >&2
+    fi
+    if [[ -n "${STUDIO_URL_PREFIX:-}" ]]; then
+        echo "Warning: STUDIO_URL_PREFIX env var is deprecated, use --studio-url-prefix flag instead" >&2
+    fi
+    if [[ -n "${GLOBAL_ICE_SERVERS:-}" ]]; then
+        echo "Warning: GLOBAL_ICE_SERVERS env var is deprecated, use --ice-servers flag instead" >&2
+    fi
 
     # Make sure that a license file is in place
     if [[ ! -f  $licenseFilePath ]] ; then
@@ -324,12 +353,97 @@ fi
                     exit 1
                 fi
             ;;
+            --host-ip)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --host-ip requires an IP address"
+                    usage
+                    exit 1
+                fi
+                hostIpFlag="$2"
+                shift 2
+            ;;
+            --ice-servers)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --ice-servers requires a JSON array"
+                    usage
+                    exit 1
+                fi
+                iceServersFlag="$2"
+                shift 2
+            ;;
+            --public-url)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --public-url requires a URL"
+                    usage
+                    exit 1
+                fi
+                publicUrlFlag="$2"
+                shift 2
+            ;;
+            --studio-url)
+                if [[ "$#" -le 1 ]]; then
+                    echo "Error: --studio-url requires a URL"
+                    usage
+                    exit 1
+                fi
+                studioUrlFlag="$2"
+                shift 2
+            ;;
+            --pull-only)
+                pullOnly=true
+                shift 1
+            ;;
             *)
                 echo "Error: unknown option $1"
                 usage
                 exit 1
         esac
     done
+
+    # Validate simple vs advanced mode
+    if [[ -n "$hostIpFlag" ]]; then
+        if [[ -n "$iceServersFlag" || -n "$publicUrlFlag" || -n "$studioUrlFlag" ]]; then
+            echo "Error: Cannot use --host-ip with advanced mode flags (--ice-servers, --public-url, --studio-url)"
+            usage
+            exit 1
+        fi
+    fi
+
+    # Validate --public-url and --studio-url must be used together
+    if [[ -n "$publicUrlFlag" && -z "$studioUrlFlag" ]]; then
+        echo "Error: --public-url requires --studio-url"
+        usage
+        exit 1
+    fi
+    if [[ -n "$studioUrlFlag" && -z "$publicUrlFlag" ]]; then
+        echo "Error: --studio-url requires --public-url"
+        usage
+        exit 1
+    fi
+
+    # Apply simple mode: use --host-ip or fall back to HOST_IP env var
+    if [[ -n "$hostIpFlag" ]]; then
+        HOST_IP="$hostIpFlag"
+    fi
+
+    # Apply advanced mode flags
+    if [[ -n "$iceServersFlag" ]]; then
+        export GLOBAL_ICE_SERVERS="$iceServersFlag"
+        envVars+=("GLOBAL_ICE_SERVERS")
+    fi
+    if [[ -n "$publicUrlFlag" ]]; then
+        export PUBLIC_URL_PREFIX="$publicUrlFlag"
+        envVars+=("PUBLIC_URL_PREFIX")
+    fi
+    if [[ -n "$studioUrlFlag" ]]; then
+        export STUDIO_URL_PREFIX="$studioUrlFlag"
+        envVars+=("STUDIO_URL_PREFIX")
+    fi
+
+    # Apply --pull-only
+    if [[ $pullOnly == true ]]; then
+        action="pull"
+    fi
 
     # Validate log dirs
     if ! mkdir -p "$LOG_ROOT/norsk-media" "$LOG_ROOT/norsk-studio" 2>/dev/null; then
@@ -367,15 +481,19 @@ fi
     local turnSettings=""
     if [[ $localTurn == "true" ]]; then
         turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
-        if [[ "$networkMode" == "host" ]]; then
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
-        else
-            export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
+        # Only auto-configure ICE servers if not explicitly set via --ice-servers
+        if [[ -z "$iceServersFlag" ]]; then
+            if [[ "$networkMode" == "host" ]]; then
+                export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
+            else
+                export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
+            fi
         fi
         envVars+=("GLOBAL_ICE_SERVERS")
     fi
 
-    if [[ "$HOST_IP" != "127.0.0.1" ]]; then
+    # Auto-configure PUBLIC_URL_PREFIX if not explicitly set via --public-url
+    if [[ "$HOST_IP" != "127.0.0.1" && -z "$publicUrlFlag" ]]; then
         export PUBLIC_URL_PREFIX=${PUBLIC_URL_PREFIX:-"http://$HOST_IP:8080"}
         envVars+=("PUBLIC_URL_PREFIX")
     fi
