@@ -28,7 +28,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils
 
 sudo mkdir -p /var/norsk-studio
 cd /var/norsk-studio
-git clone -b deployed https://github.com/norskvideo/norsk-studio-docker.git
+git clone -b git-mgt https://github.com/norskvideo/norsk-studio-docker.git
 
 cd /var/norsk-studio/norsk-studio-docker
 
