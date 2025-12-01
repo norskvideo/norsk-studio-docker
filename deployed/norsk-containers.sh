@@ -33,14 +33,22 @@ else
     ice_servers=""
 fi
 
-# Extract hardware type from DEPLOY_HARDWARE path
-hw_flag=""
+# Extract hardware flags from DEPLOY_HARDWARE (space-separated list)
+hw_flags=()
 if [[ -n "${DEPLOY_HARDWARE:-}" ]]; then
-    if [[ "$DEPLOY_HARDWARE" == *"quadra"* ]]; then
-        hw_flag="--enable-quadra"
-    elif [[ "$DEPLOY_HARDWARE" == *"nvidia"* ]]; then
-        hw_flag="--enable-nvidia"
-    fi
+    for hw_type in $DEPLOY_HARDWARE; do
+        case "$hw_type" in
+            quadra)
+                hw_flags+=(--enable-quadra)
+                ;;
+            nvidia)
+                hw_flags+=(--enable-nvidia)
+                ;;
+            *)
+                echo "Warning: Unknown hardware type '$hw_type' in DEPLOY_HARDWARE" >&2
+                ;;
+        esac
+    done
 fi
 
 # Translate old interface: pull/up/down actions
@@ -66,8 +74,8 @@ if [[ -n "$ice_servers" ]]; then
     args+=(--ice-servers "$ice_servers")
 fi
 
-if [[ -n "$hw_flag" ]]; then
-    args+=($hw_flag)
+if [[ ${#hw_flags[@]} -gt 0 ]]; then
+    args+=("${hw_flags[@]}")
 fi
 
 if [[ -n "$action_flag" ]]; then
