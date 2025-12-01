@@ -45,10 +45,15 @@ get_latest_version() {
 
 list_versions() {
     local current=$(get_current_version)
+    local has_changes=""
+    if [[ -n "$(git_cmd status --porcelain 2>/dev/null)" ]]; then
+        has_changes=" + changes"
+    fi
+
     echo "Available versions:"
     git_cmd tag -l "$TAG_PATTERN" | sort | while read -r tag; do
         if [[ "$tag" == "$current" ]]; then
-            echo "  $tag (current)"
+            echo "  $tag (current$has_changes)"
         else
             echo "  $tag"
         fi
@@ -64,7 +69,7 @@ check_versions() {
     echo "  Latest:  $latest"
 
     if [[ "$current" != "$latest" ]]; then
-        echo "  Update available: ./update.sh --apply"
+        echo "  Update available: ./manage.sh --apply"
     fi
 
     echo ""
