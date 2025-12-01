@@ -494,16 +494,32 @@ main() {
 
     local turnSettings=""
     if [[ $localTurn == "true" ]]; then
+        # Generate TURN password if not exists
+        TURN_PASSWORD_FILE="secrets/turn-password"
+        if [[ ! -f "$TURN_PASSWORD_FILE" ]]; then
+            mkdir -p secrets
+            # Generate 32 character random password
+            if command -v openssl > /dev/null 2>&1; then
+                openssl rand -base64 24 > "$TURN_PASSWORD_FILE"
+            else
+                # Fallback: use /dev/urandom
+                tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32 > "$TURN_PASSWORD_FILE"
+            fi
+            echo "Generated TURN password in $TURN_PASSWORD_FILE"
+        fi
+        export TURN_PASSWORD=$(cat "$TURN_PASSWORD_FILE")
+
         turnSettings="-f yaml/servers/turn.yaml -f yaml/$networkDir/turn.yaml"
         # Only auto-configure ICE servers if not explicitly set via --ice-servers
         if [[ -z "$iceServersFlag" ]]; then
             if [[ "$networkMode" == "host" ]]; then
-                export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
+                export GLOBAL_ICE_SERVERS='[{"url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "'$TURN_PASSWORD'" }, { "url": "turn:127.0.0.1:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "'$TURN_PASSWORD'" }]'
             else
-                export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "norsk" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "norsk" }]'
+                export GLOBAL_ICE_SERVERS='[{"url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478", "username": "norsk", "credential": "'$TURN_PASSWORD'" }, { "url": "turn:norsk-turn:3478", "reportedUrl": "turn:'$HOST_IP':3478?transport=tcp", "username": "norsk", "credential": "'$TURN_PASSWORD'" }]'
             fi
         fi
         envVars+=("GLOBAL_ICE_SERVERS")
+        envVars+=("TURN_PASSWORD")
     fi
 
     # Auto-configure PUBLIC_URL_PREFIX if not explicitly set via --public-url

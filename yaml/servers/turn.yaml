@@ -2,5 +2,9 @@ services:
   norsk-turn:
     container_name: norsk-turn
     image: coturn/coturn:${COTURN_VERSION:-latest}
+    command:
+      - "-c"
+      - "/etc/coturn/turnserver.conf"
+      - "--user=norsk:${TURN_PASSWORD}"
     volumes:
-      - ./config/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./yaml/servers/config/turnserver.conf:/etc/coturn/turnserver.conf:ro
