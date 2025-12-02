@@ -25,14 +25,13 @@ git clone -b git-mgt https://github.com/norskvideo/norsk-studio-docker.git
 
 cd /var/norsk-studio/norsk-studio-docker
 
-# Run bootstrap script (media download happens in 00-common.sh)
 ./scripts/bootstrap.sh \
-  --hardware="$HARDWARE" \
+  --hardware="${HARDWARE:=auto}" \
   --platform=linode \
   --license="$NORSK_LICENSE" \
   --password="$STUDIO_PASSWORD" \
-  --domain="$DOMAIN_NAME" \
-  --certbot-email="$CERTBOT_EMAIL"
+  --domain="${DOMAIN_NAME:-}" \
+  --certbot-email="${CERTBOT_EMAIL:-}"
 
 # Reboot if Quadra was detected/used (check for quadra in installed config)
 if grep -q 'DEPLOY_HARDWARE="quadra"' deployed/*/norsk-config.sh 2>/dev/null; then
