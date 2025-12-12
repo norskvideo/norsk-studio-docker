@@ -225,7 +225,7 @@ main() {
     local quadraSettings=""
     local workflow=""
     local overrides=""
-    local norskUsersSettings=""
+    local norskUserSettings=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -407,7 +407,7 @@ main() {
                         fi
                     fi
                 fi
-                norskUsersSettings="-f yaml/norsk-users.yaml"
+                norskUserSettings="-f yaml/norsk-users.yaml"
                 shift 1
             ;;
             --no-detach)
