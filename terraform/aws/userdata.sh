@@ -8,6 +8,14 @@ set -euxo pipefail
 # Capture output
 exec >/var/log/ec2-userdata.log 2>&1
 
+# Install git
+apt-get update
+apt-get install -y git
+
+# Install awscli
+snap install aws-cli --classic
+
+
 # Get IMDSv2 token
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
   -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
@@ -40,10 +48,6 @@ CERTBOT_EMAIL=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" \
   http://169.254.169.254/latest/meta-data/tags/instance/CertbotEmail || echo "")
 
 HARDWARE_OVERRIDE="${hardware_override}"
-
-# Install git
-apt-get update
-apt-get install -y git
 
 # Clone repo
 mkdir -p /var/norsk-studio

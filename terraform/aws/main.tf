@@ -14,14 +14,14 @@ provider "aws" {
 }
 
 # Data sources for AMI lookup
-data "aws_ami" "ubuntu_22_04" {
+data "aws_ami" "ubuntu_24_04" {
   count       = var.ami_id == "" ? 1 : 0
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
   }
 
   filter {
@@ -31,7 +31,7 @@ data "aws_ami" "ubuntu_22_04" {
 }
 
 locals {
-  ami_id         = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu_22_04[0].id
+  ami_id         = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu_24_04[0].id
   create_vpc     = var.vpc_id == ""
   create_subnet  = var.subnet_id == ""
   vpc_id         = local.create_vpc ? aws_vpc.main[0].id : var.vpc_id
@@ -130,10 +130,10 @@ resource "aws_security_group" "norsk_studio" {
   }
 
   ingress {
-    description = "Norsk Studio WebSocket"
-    from_port   = 6791
-    to_port     = 6791
-    protocol    = "tcp"
+    description = "UDP ingress"
+    from_port   = 5001
+    to_port     = 5001
+    protocol    = "udp"
     cidr_blocks = var.allowed_http_cidrs
   }
 

@@ -6,6 +6,7 @@
 platform_setup() {
   local repo_dir="$INSTALL_DIR/norsk-studio-docker"
   local platform_dir="$repo_dir/deployed/AWS"
+  mkdir -p "$platform_dir"
 
   # Get IMDSv2 token (more secure than IMDSv1)
   local token
