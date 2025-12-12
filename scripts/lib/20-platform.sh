@@ -17,6 +17,9 @@ setup_platform() {
         Linode)
           PLATFORM="linode"
           ;;
+        Amazon*|EC2*)
+          PLATFORM="aws"
+          ;;
         *)
           PLATFORM="local"
           ;;
@@ -28,8 +31,8 @@ setup_platform() {
   fi
 
   # Validate platform
-  if [[ ! "$PLATFORM" =~ ^(linode|google|oracle|local)$ ]]; then
-    echo "Error: Platform must be one of: linode, google, oracle, local" >&2
+  if [[ ! "$PLATFORM" =~ ^(linode|google|oracle|aws|local)$ ]]; then
+    echo "Error: Platform must be one of: linode, google, oracle, aws, local" >&2
     exit 1
   fi
 

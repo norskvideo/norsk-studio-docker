@@ -116,12 +116,20 @@ fi
 # Auto-detect hardware if requested
 if [[ "$HARDWARE" == "auto" ]]; then
   echo "Auto-detecting hardware..."
-  if command -v lspci >/dev/null 2>&1 && lspci | grep -iq netint; then
-    HARDWARE="quadra"
-    echo "Detected: Netint Quadra"
+  if command -v lspci >/dev/null 2>&1; then
+    if lspci | grep -iq netint; then
+      HARDWARE="quadra"
+      echo "Detected: Netint Quadra"
+    elif lspci | grep -iq nvidia; then
+      HARDWARE="nvidia"
+      echo "Detected: NVIDIA GPU"
+    else
+      HARDWARE="none"
+      echo "Detected: No hardware acceleration"
+    fi
   else
     HARDWARE="none"
-    echo "Detected: No hardware acceleration"
+    echo "Detected: No hardware acceleration (lspci not available)"
   fi
 fi
 

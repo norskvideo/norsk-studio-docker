@@ -1,0 +1,44 @@
+# Example terraform.tfvars for Norsk Studio EC2 deployment
+# Copy to terraform.tfvars and fill in your values
+
+# Required
+key_name            = "my-ec2-keypair"
+norsk_license_json  = "{\"license\":\"your-license-key-here\"}"
+studio_password     = "changeme123"
+
+# Optional - AWS region
+aws_region = "us-east-1"
+
+# Optional - Instance type (use GPU instances for NVIDIA hardware)
+# Software-only: t3.xlarge, t3.2xlarge
+# NVIDIA GPU: g4dn.xlarge (T4), g5.xlarge (A10G)
+# Quadra: t3.xlarge (Netint card must be installed separately)
+instance_type = "t3.xlarge"
+
+# Optional - Hardware profile
+# auto: detect via lspci (recommended)
+# none: software-only
+# quadra: Netint Quadra
+# nvidia: NVIDIA GPU
+hardware_profile = "auto"
+
+# Optional - Domain and SSL
+domain_name   = ""  # e.g. "studio.example.com"
+certbot_email = ""  # e.g. "admin@example.com"
+
+# Optional - Networking
+allowed_ssh_cidrs  = ["0.0.0.0/0"]  # Restrict to your IP for security
+allowed_http_cidrs = ["0.0.0.0/0"]
+
+# Optional - Existing VPC/Subnet (leave empty to create new)
+vpc_id    = ""
+subnet_id = ""
+
+# Optional - Storage
+root_volume_size = 50  # GB
+
+# Optional - Git branch
+repo_branch = "git-mgt"
+
+# Optional - Project naming
+project_name = "norsk-studio"
