@@ -40,22 +40,6 @@ if [[ "$OSTYPE" == "linux"* ]]; then
         NETWORK_MODE_DEFAULT="host"
         LOCAL_TURN_DEFAULT=false
     fi
-
-    # Set user/group for hardware access on Linux/WSL2
-    # These need to be set as IDs because they are names on the host system, not inside the container
-    if [[ -z "${NORSK_USER:-}" ]]; then
-        export NORSK_USER=$(id -u)
-
-        if [[ -z "${NORSK_GROUP:-}" ]]; then
-            # Prefer the disk group if current user is a member (for hardware access, e.g. Netint Quadra)
-            if id -nG | grep -qw disk; then
-                export NORSK_GROUP=$(getent group disk | cut -d: -f3)
-            else
-                # Otherwise use the default group
-                export NORSK_GROUP=$(id -g)
-            fi
-        fi
-    fi
 else
     # macOS uses docker mode
     NETWORK_MODE_DEFAULT="docker"
@@ -241,6 +225,7 @@ main() {
     local quadraSettings=""
     local workflow=""
     local overrides=""
+    local norskUsersSettings=""
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h | --help)
@@ -344,7 +329,7 @@ main() {
             ;;
             --enable-nvidia)
                 if [[ "$OSTYPE" == "linux"* ]]; then
-                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml -f yaml/norsk-users.yaml"
+                    nvidiaSettings="-f yaml/hardware-devices/nvidia.yaml"
                     shift 1
                 else
                     echo "nvidia is not supported on $OSTYPE"
@@ -354,7 +339,7 @@ main() {
             ;;
             --enable-quadra)
                 if [[ "$OSTYPE" == "linux"* ]]; then
-                    quadraSettings="-f yaml/hardware-devices/quadra.yaml -f yaml/norsk-users.yaml"
+                    quadraSettings="-f yaml/hardware-devices/quadra.yaml"
                     shift 1
                 else
                     echo "quadra is not supported on $OSTYPE"
@@ -406,6 +391,25 @@ main() {
                 quiet=true
                 shift 1
             ;;
+            --set-norsk-user)
+                # Set user/group for hardware access on Linux/WSL2
+                # These need to be set as IDs because they are names on the host system, not inside the container
+                if [[ -z "${NORSK_USER:-}" ]]; then
+                    export NORSK_USER=$(id -u)
+
+                    if [[ -z "${NORSK_GROUP:-}" ]]; then
+                        # Prefer the disk group if current user is a member (for hardware access, e.g. Netint Quadra)
+                        if id -nG | grep -qw disk; then
+                            export NORSK_GROUP=$(getent group disk | cut -d: -f3)
+                        else
+                            # Otherwise use the default group
+                            export NORSK_GROUP=$(id -g)
+                        fi
+                    fi
+                fi
+                norskUsersSettings="-f yaml/norsk-users.yaml"
+                shift 1
+            ;;
             --no-detach)
                 noDetach=true
                 shift 1
@@ -416,6 +420,9 @@ main() {
                 exit 1
         esac
     done
+
+
+
 
     # Validate simple vs advanced mode
     if [[ -n "$hostIpFlag" ]]; then
@@ -561,7 +568,7 @@ main() {
     if [[ "$quiet" == true ]]; then
         quietFlag="--quiet"
     fi
-    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $action $quietFlag)
+    local -a composeArgs=($norskMediaSettings $dataSettings $studioSettings $turnSettings $nvidiaSettings $quadraSettings $norskUserSettings $action $quietFlag)
 
     echo "Containers:"
     echo "  Media:  ${NORSK_MEDIA_IMAGE#*:}"
