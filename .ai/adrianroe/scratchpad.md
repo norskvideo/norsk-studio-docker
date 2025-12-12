@@ -502,3 +502,314 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 11. **EC2 parameters:** Hybrid SSM (secrets) + Tags (non-secrets)
 12. **IaC tool:** Terraform (multi-cloud ready vs CloudFormation lock-in)
 13. **GPU detection:** `lspci | grep -iq nvidia` (mirrors Quadra pattern)
+14. **GCP parameters:** Secret Manager (secrets) + Metadata (non-secrets) - already used by existing platform
+
+---
+
+## GCP (Google Cloud Platform) Terraform Implementation
+
+**Goal:** Mirror AWS Terraform implementation for GCP, leveraging existing Google platform support.
+
+### Current State Analysis
+
+**Existing Google Platform Support:**
+- `scripts/platforms/google.sh` - metadata service integration
+- `deployed/Google/norsk-config.sh` - runtime config
+- `deployed/Google/admin-password.sh` - password from metadata
+- Uses metadata attributes: `deploy_domain_name`, `deploy_certbot_email`, `norsk-studio-admin-password`
+- No Secret Manager integration yet
+- No Terraform IaC
+
+**AWS Implementation (reference):**
+- SSM Parameter Store for secrets
+- EC2 tags for non-secrets
+- Terraform: VPC, subnet, IGW, security group, EIP, IAM role
+- UserData script calls bootstrap.sh
+- 15 input vars, 12 outputs
+- README with deployment guide
+
+### GCP Architecture Design
+
+**GCP Service Mapping:**
+| AWS | GCP Equivalent |
+|-----|---------------|
+| SSM Parameter Store | Secret Manager |
+| EC2 Tags | Instance Metadata |
+| IAM Role | Service Account |
+| Security Group | Firewall Rules |
+| Elastic IP | Static External IP |
+| UserData | startup-script metadata |
+| AMI | Image Family (ubuntu-2404-lts) |
+| EBS Volume | Persistent Disk |
+
+### Implementation Plan
+
+**terraform/gcp/ structure:**
+```
+terraform/gcp/
+├── main.tf              # VPC, subnet, firewall, compute instance, static IP, service account
+├── variables.tf         # 15+ input vars (project, region, zone, machine type, secrets, domain, etc)
+├── outputs.tf           # 12+ outputs (IPs, URLs, SSH command, resource IDs)
+├── startup-script.sh    # Template: clone repo, call bootstrap.sh
+├── terraform.tfvars.example  # Documented examples
+└── README.md            # Deployment guide
+```
+
+**Key Design Decisions:**
+
+1. **Secret Storage:**
+   - Secret Manager for license + password (like AWS SSM)
+   - Service account with `secretmanager.secretAccessor` role
+   - Modify `scripts/platforms/google.sh` to check Secret Manager first, fallback to metadata
+
+2. **Metadata Usage:**
+   - Domain, email → metadata attributes (already implemented)
+   - Hardware profile → metadata attribute (new)
+   - Repo branch → metadata attribute (new)
+
+3. **Networking:**
+   - Auto-create VPC + subnet (like AWS), OR use existing
+   - Firewall rules: 22 (SSH), 80 (HTTP), 443 (HTTPS), 6791 (WebSocket), 5001/udp
+   - Static external IP for stable public address
+
+4. **Compute:**
+   - Default: n2-standard-4 (4 vCPU, 16GB RAM, ~$0.19/hr)
+   - GPU: n1-standard-4 + nvidia-tesla-t4 (~$0.35/hr + $0.35/hr GPU)
+   - Image: ubuntu-2404-noble-amd64 (matches AWS)
+   - Boot disk: 50GB SSD (pd-ssd or pd-balanced)
+
+5. **Service Account:**
+   - Custom SA with minimal permissions
+   - Roles: `secretmanager.secretAccessor`, `logging.logWriter`, `monitoring.metricWriter`
+
+6. **Startup Script:**
+   - Similar to AWS UserData
+   - Fetch secrets from Secret Manager via gcloud CLI
+   - Fetch config from metadata
+   - Clone repo, run bootstrap.sh
+
+### Files to Create/Modify
+
+**New Files:**
+1. `terraform/gcp/main.tf` (~300 lines)
+   - Provider config (project, region)
+   - VPC + subnet (conditional, like AWS)
+   - Firewall rules (ingress/egress)
+   - Service account + IAM bindings
+   - Secret Manager secrets
+   - Static external IP
+   - Compute instance
+
+2. `terraform/gcp/variables.tf` (~120 lines)
+   - gcp_project (required)
+   - gcp_region (default: us-central1)
+   - gcp_zone (default: us-central1-a)
+   - machine_type (default: n2-standard-4)
+   - image_family (default: ubuntu-2404-noble-amd64)
+   - ssh_user (default: ubuntu)
+   - norsk_license_json (sensitive)
+   - studio_password (sensitive)
+   - domain_name, certbot_email
+   - hardware_profile (auto|none|quadra|nvidia)
+   - repo_branch (default: git-mgt)
+   - boot_disk_size (default: 50)
+   - use_gpu (bool, default: false)
+   - gpu_type (default: nvidia-tesla-t4)
+   - network_name, subnet_name (optional, for existing VPC)
+   - project_name (for labels)
+
+3. `terraform/gcp/outputs.tf` (~70 lines)
+   - instance_id, instance_name
+   - public_ip, private_ip
+   - norsk_studio_url
+   - ssh_command
+   - startup_script_log (gcloud compute instances get-serial-port-output)
+   - vpc_id, subnet_id
+   - firewall_rule_names
+   - service_account_email
+   - secret_manager_ids
+
+4. `terraform/gcp/startup-script.sh` (~80 lines)
+   - Install gcloud CLI (if not present)
+   - Fetch license + password from Secret Manager
+   - Fetch domain, email, hardware from metadata
+   - Install git
+   - Clone repo
+   - Run bootstrap.sh
+
+5. `terraform/gcp/terraform.tfvars.example` (~50 lines)
+   - Examples for all scenarios:
+     - Software-only
+     - NVIDIA GPU (n1-standard-4 + T4)
+     - Custom VPC
+     - Domain + SSL
+
+6. `terraform/gcp/README.md` (~250 lines)
+   - Prerequisites (gcloud, terraform, project setup)
+   - Quick start
+   - Machine types + GPU options
+   - Cost estimation
+   - Troubleshooting (startup script logs, service account permissions)
+   - Cleanup
+
+**Modified Files:**
+1. `scripts/platforms/google.sh` (~60 lines, +20)
+   - Add Secret Manager fetch for license + password
+   - Check if `gcloud` available
+   - Fetch `/norsk/license` and `/norsk/password` from Secret Manager
+   - Fallback to metadata for password (backward compat)
+   - Export vars for bootstrap.sh
+
+2. `scripts/lib/10-secrets.sh` (optional enhancement)
+   - Already handles $STUDIO_PASSWORD from platform
+   - May need adjustment if Secret Manager returns different format
+
+### Terraform Resource Breakdown
+
+**main.tf resources:**
+```hcl
+# Provider
+provider "google" { project, region }
+
+# Data sources
+data "google_compute_image" "ubuntu_2404"  # Image lookup
+data "google_compute_zones" "available"     # Zone list
+
+# Networking (conditional)
+resource "google_compute_network" "vpc"             # VPC
+resource "google_compute_subnetwork" "subnet"       # Subnet
+resource "google_compute_firewall" "allow_ssh"      # Port 22
+resource "google_compute_firewall" "allow_http"     # Port 80
+resource "google_compute_firewall" "allow_https"    # Port 443
+resource "google_compute_firewall" "allow_ws"       # Port 6791
+resource "google_compute_firewall" "allow_udp"      # Port 5001
+
+# IAM
+resource "google_service_account" "norsk_studio"    # Service account
+resource "google_project_iam_member" "secret_accessor"  # Secret Manager role
+
+# Secrets
+resource "google_secret_manager_secret" "norsk_license"       # License secret
+resource "google_secret_manager_secret_version" "license_v1"  # License value
+resource "google_secret_manager_secret" "studio_password"     # Password secret
+resource "google_secret_manager_secret_version" "password_v1" # Password value
+
+# Compute
+resource "google_compute_address" "static_ip"       # Static external IP
+resource "google_compute_instance" "norsk_studio"   # VM instance
+  # metadata: startup-script, deploy_domain_name, deploy_certbot_email, hardware_profile
+  # service_account: email, scopes
+  # network_interface: subnetwork, access_config (static IP)
+  # boot_disk: size, type, image
+  # (optional) guest_accelerator for GPU
+```
+
+### Hardware Profile Support
+
+**CPU-only (default):**
+- Machine: n2-standard-4
+- Cost: ~$0.19/hr
+
+**NVIDIA GPU:**
+- Machine: n1-standard-4 (GPU requires N1 family)
+- Accelerator: nvidia-tesla-t4 (count: 1)
+- GPU drivers: installed by hardware/nvidia.sh
+- Cost: ~$0.19/hr + $0.35/hr = $0.54/hr
+
+**Quadra:**
+- Not typically available on GCP
+- Would require bare metal or custom image
+- Likely not supported in initial implementation
+
+### Testing Strategy
+
+1. **Validation:**
+   - `terraform validate`
+   - `terraform plan` (check resource count)
+
+2. **Deployment:**
+   - Test with software-only first
+   - Test with NVIDIA GPU
+   - Test with custom VPC
+   - Test with domain + SSL
+
+3. **Verification:**
+   - Check startup script logs: `gcloud compute instances get-serial-port-output`
+   - SSH to instance, verify services running
+   - Access Studio via public IP
+   - Verify Secret Manager access
+
+### Cost Estimation
+
+**Software-only (n2-standard-4):**
+- Compute: ~$0.19/hr (~$137/mo)
+- Disk 50GB SSD: ~$8.50/mo
+- Static IP: ~$7.50/mo (if reserved but unused)
+- **Total: ~$153/mo**
+
+**GPU (n1-standard-4 + T4):**
+- Compute: ~$0.19/hr (~$137/mo)
+- GPU: ~$0.35/hr (~$252/mo)
+- Disk: ~$8.50/mo
+- Static IP: ~$7.50/mo
+- **Total: ~$405/mo**
+
+### Implementation Phases
+
+**Phase 1: Core Terraform Structure**
+- Create terraform/gcp/ directory
+- main.tf: provider, data sources, locals
+- variables.tf: all input vars
+- outputs.tf: all outputs
+- terraform.tfvars.example
+
+**Phase 2: Networking & IAM**
+- VPC + subnet (conditional on existing network)
+- Firewall rules (SSH, HTTP, HTTPS, WS, UDP)
+- Service account + IAM bindings
+
+**Phase 3: Secret Manager**
+- Secret resources for license + password
+- IAM binding for service account access
+
+**Phase 4: Compute Instance**
+- Static external IP
+- Compute instance resource
+- Boot disk config
+- Metadata for startup script + config
+- (Optional) GPU accelerator support
+
+**Phase 5: Startup Script**
+- startup-script.sh template
+- Fetch secrets from Secret Manager
+- Fetch config from metadata
+- Clone repo + bootstrap.sh call
+- GPU reboot logic (if needed)
+
+**Phase 6: Platform Script Enhancement**
+- Modify scripts/platforms/google.sh
+- Add Secret Manager fetch (gcloud secrets)
+- Maintain backward compat with metadata
+
+**Phase 7: Documentation**
+- README.md with deployment guide
+- Troubleshooting section
+- Cost breakdown
+- GPU setup instructions
+
+**Phase 8: Testing**
+- Validate terraform
+- Deploy test instance
+- Verify all components
+- Document any issues
+
+### Unresolved Questions
+
+1. **Quadra support on GCP?** (likely no - rare/unsupported)
+2. **GPU driver auto-install** - does hardware/nvidia.sh work on GCP Ubuntu 24.04?
+3. **Secret Manager regional replication** - single region or multi-region?
+4. **VPC peering** - support connecting to existing peered VPCs?
+5. **Custom service account** - user-provided SA or always create new?
+6. **Metadata vs labels** - instance metadata for runtime config, labels for organization?
+7. **Startup script size limit** - inline vs GCS bucket? (64KB limit)
+8. **Ubuntu 24.04 image** - confirm family name `ubuntu-2404-noble-amd64`?

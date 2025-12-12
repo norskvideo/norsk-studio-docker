@@ -2,3 +2,5 @@ _ignore
 norsk-studio
 logs
 terraform/aws/.terraform
+terraform/gcp/.terraform
+deployed/*/norsk-config.sh

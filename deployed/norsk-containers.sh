@@ -68,6 +68,7 @@ args=(
     --public-url "${PUBLIC_URL_PREFIX:-https://$DEPLOY_HOSTNAME/norsk}"
     --studio-url "${STUDIO_URL_PREFIX:-https://$DEPLOY_HOSTNAME/studio}"
     --set-norsk-user
+    --no-detach
 )
 
 # if [[ -n "$ice_servers" ]]; then

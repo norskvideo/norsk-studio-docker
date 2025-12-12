@@ -2,9 +2,14 @@
 # Copy to terraform.tfvars and fill in your values
 
 # Required
-key_name            = "my-ec2-keypair"
-norsk_license_json  = "{\"license\":\"your-license-key-here\"}"
-studio_password     = "changeme123"
+key_name           = "my-ec2-keypair"
+studio_password    = "changeme123"
+
+norsk_license_json = <<EOF
+{
+  "license": "your-license-here"
+}
+EOF
 
 # Optional - AWS region
 aws_region = "us-east-1"
