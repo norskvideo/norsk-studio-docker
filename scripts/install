@@ -80,7 +80,7 @@ set -eo pipefail
     }
 
     targetDirname="norsk-studio"
-    releaseVersion="2.0.0-TBD"
+    releaseVersion="2.0.0"
     repoURL="https://github.com/norskvideo/norsk-studio-docker.git"
 
     tmpDir="$(mktemp -d -t norsk-studio-install.XXXXXXXXXX || \
