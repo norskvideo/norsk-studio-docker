@@ -5,15 +5,6 @@ __layout:
   - id: abr_ladder
     x: 1728
     y: 224
-  - id: ll-hls
-    x: 2048
-    y: 432
-  - id: source_switcher
-    x: 656
-    y: 432
-  - id: on_screen_graphic
-    x: 960
-    y: 224
   - id: browser_overlay
     x: 1344
     y: 224
@@ -26,6 +17,15 @@ __layout:
   - id: output_preview
     x: 1712
     y: 816
+  - id: ll-hls
+    x: 2112
+    y: 512
+  - id: on_screen_graphic
+    x: 992
+    y: 224
+  - id: smart_source_switch
+    x: 560
+    y: 432
 __globalConfig: {}
 components:
   - type: input.srt-listener
@@ -176,68 +176,6 @@ components:
           type: take-first-stream
           filter:
             - media: video
-  - type: output.autoCmaf
-    config:
-      displayName: LL-HLS
-      name: default
-      sessionId: false
-      segments:
-        retentionPeriod: 60
-        defaultSegmentCount: 0
-        targetSegmentDuration: 4
-        targetPartDuration: 1
-      destinations: []
-      initialState: enabled
-      multiplePrograms: false
-      notes: ""
-      id: ll-hls
-    subscriptions:
-      - source: abr_ladder
-        streams:
-          type: take-all-streams
-          filter:
-            - media: video
-      - source: source_switcher
-        streams:
-          type: take-first-stream
-          filter:
-            - media: audio
-  - type: processor.sourceSwitcher
-    config:
-      displayName: Source Switcher
-      enablePreviews: false
-      resolution:
-        width: 1280
-        height: 720
-      frameRate:
-        frames: 25
-        seconds: 1
-      sampleRate: 48000
-      channelLayout: stereo
-      notes: ""
-      id: source_switcher
-    subscriptions:
-      - source: srt_input
-        streams:
-          type: take-all-streams
-          filter:
-            - media: video
-            - media: audio
-  - type: processor.onscreenGraphic
-    config:
-      displayName: On Screen Graphic
-      initialGraphic: Norsk.png
-      initialPosition:
-        type: named
-        position: topleft
-      notes: ""
-      id: on_screen_graphic
-    subscriptions:
-      - source: source_switcher
-        streams:
-          type: take-first-stream
-          filter:
-            - media: video
   - type: processor.browserOverlay
     config:
       displayName: Browser Overlay
@@ -298,8 +236,86 @@ components:
           type: take-first-stream
           filter:
             - media: video
-      - source: source_switcher
+      - source: smart_source_switch
         streams:
           type: take-first-stream
           filter:
+            - media: audio
+  - type: output.autoCmaf
+    config:
+      displayName: LL-HLS
+      name: default
+      sessionId: true
+      allowPreview: true
+      segments:
+        retentionPeriod: 60
+        defaultSegmentCount: 0
+        targetSegmentDuration: 4
+        targetPartDuration: 1
+        audioSegmentStrategy:
+          type: default
+        videoSegmentStrategy:
+          type: default
+        integralSegmentDuration: true
+      destinations: []
+      pushMode: hls_dash
+      pdtEverySegment: true
+      initialState: enabled
+      multiplePrograms: false
+      discontinuityHandling: discontinuity
+      notes: ""
+      makeProgram: true
+      id: ll-hls
+    subscriptions:
+      - source: abr_ladder
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
+      - source: smart_source_switch
+        streams:
+          type: take-specific-streams
+          filter:
+            - media: audio
+              displayName: Smart Source Switch - audio
+              sourceName: smart_source_switch
+  - type: processor.onscreenGraphic
+    config:
+      displayName: On Screen Graphic
+      initialFilename: Norsk.png
+      initialPosition:
+        type: named
+        position: topleft
+      notes: ""
+      id: on_screen_graphic
+    subscriptions:
+      - source: smart_source_switch
+        streams:
+          type: take-first-stream
+          filter:
+            - media: video
+  - type: processor.smartSourceSwitch
+    config:
+      displayName: Smart Source Switch
+      resolution:
+        width: 1280
+        height: 720
+      frameRate:
+        frames: 25
+        seconds: 1
+      sampleRate: 48000
+      channelLayout: stereo
+      sources:
+        - camera1
+        - camera2
+      fallback:
+        kind: testcard
+      notes: ""
+      id: smart_source_switch
+    subscriptions:
+      - source: srt_input
+        streams:
+          type: take-all-streams
+          filter:
+            - media: video
             - media: audio
