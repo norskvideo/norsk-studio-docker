@@ -1,7 +1,6 @@
 [Unit]
 Description=Nginx proxy for Norsk
 After=network.target
-After=norsk-setup.service
 
 [Service]
 User=root

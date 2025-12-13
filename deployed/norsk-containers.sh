@@ -69,7 +69,6 @@ args=(
     --studio-url "${STUDIO_URL_PREFIX:-https://$DEPLOY_HOSTNAME/studio}"
     --logs "${DEPLOY_LOGS}"
     --set-norsk-user
-    --no-detach
 )
 
 # if [[ -n "$ice_servers" ]]; then
