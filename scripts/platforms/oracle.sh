@@ -4,8 +4,7 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-  local platform_dir="$repo_dir/deployed/Oracle"
+  local platform_dir="$REPO_DIR/deployed/Oracle"
 
   # Get public IP from AWS check IP service
   export DEPLOY_PUBLIC_IP="$(curl -fs http://checkip.amazonaws.com)"
@@ -32,7 +31,7 @@ HEREDOC
   chown norsk:norsk "$platform_dir/norsk-config.sh"
 
   # Write vendor file for detection
-  printf 'Oracle\n' > "$repo_dir/deployed/vendor"
+  printf 'Oracle\n' > "$REPO_DIR/deployed/vendor"
 
   # TODO: Verify if still needed - original script modified iptables
   # Fix up iptables rules to allow all incoming traffic (for norsk)

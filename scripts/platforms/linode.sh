@@ -4,8 +4,7 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-  local platform_dir="$repo_dir/deployed/Linode"
+  local platform_dir="$REPO_DIR/deployed/Linode"
 
   # Get public IP from eth0
   export DEPLOY_PUBLIC_IP="$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)"

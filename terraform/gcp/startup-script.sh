@@ -52,16 +52,13 @@ apt-get install -y git
 
 # Clone repo
 echo "Cloning repository..."
-mkdir -p /var/norsk-studio
-cd /var/norsk-studio
-
-if [ -d "norsk-studio-docker" ]; then
+if [ -d "/opt/norsk-studio/.git" ]; then
   echo "Repository already exists, pulling latest..."
-  cd norsk-studio-docker
+  cd /opt/norsk-studio
   git pull
 else
-  git clone -b "$REPO_BRANCH" https://github.com/norskvideo/norsk-studio-docker.git
-  cd norsk-studio-docker
+  git clone -b "$REPO_BRANCH" https://github.com/norskvideo/norsk-studio-docker.git /opt/norsk-studio
+  cd /opt/norsk-studio
 fi
 
 # Run bootstrap

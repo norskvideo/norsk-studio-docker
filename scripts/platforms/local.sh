@@ -4,8 +4,7 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-  local platform_dir="$repo_dir/deployed/local"
+  local platform_dir="$REPO_DIR/deployed/local"
 
   # Use localhost defaults
   export DEPLOY_PUBLIC_IP="127.0.0.1"

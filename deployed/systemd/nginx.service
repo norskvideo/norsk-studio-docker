@@ -5,10 +5,10 @@ After=network.target
 [Service]
 User=root
 Restart=always
-WorkingDirectory=/var/norsk-studio/norsk-studio-docker
-ExecStart=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh up
-ExecStop=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh down
-ExecReload=/var/norsk-studio/norsk-studio-docker/deployed/support-containers.sh exec nginx nginx -s reload
+WorkingDirectory=/opt/norsk-studio
+ExecStart=/opt/norsk-studio/deployed/support-containers.sh up
+ExecStop=/opt/norsk-studio/deployed/support-containers.sh down
+ExecReload=/opt/norsk-studio/deployed/support-containers.sh exec nginx nginx -s reload
 
 [Install]
 WantedBy=multi-user.target

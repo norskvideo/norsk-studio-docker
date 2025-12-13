@@ -4,16 +4,14 @@
 # Sourced by bootstrap.sh
 
 setup_secrets() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-
   echo "Writing license file..."
-  mkdir -p "$repo_dir/secrets"
-  (set +x; printf '%s\n' "$NORSK_LICENSE") > "$repo_dir/secrets/license.json"
-  chown norsk:norsk "$repo_dir/secrets/license.json"
-  chmod 600 "$repo_dir/secrets/license.json"
+  mkdir -p "$REPO_DIR/secrets"
+  (set +x; printf '%s\n' "$NORSK_LICENSE") > "$REPO_DIR/secrets/license.json"
+  chown norsk:norsk "$REPO_DIR/secrets/license.json"
+  chmod 600 "$REPO_DIR/secrets/license.json"
 
   echo "Generating password hash..."
-  local htp_dir="$repo_dir/support/oauth2/secrets"
+  local htp_dir="$REPO_DIR/support/oauth2/secrets"
   local htpasswd_file="$htp_dir/.htpasswd"
   mkdir -p "$htp_dir"
   (set +x; printf '%s' "$STUDIO_PASSWORD") \

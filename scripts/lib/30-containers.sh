@@ -4,10 +4,8 @@
 # Sourced by bootstrap.sh
 
 setup_containers() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-
   echo "Pulling Norsk container images..."
-  cd "$repo_dir"
+  cd "$REPO_DIR"
   ./deployed/norsk-containers.sh pull --quiet
 
   echo "Pulling support container images..."

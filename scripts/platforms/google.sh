@@ -4,8 +4,7 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-  local platform_dir="$repo_dir/deployed/Google"
+  local platform_dir="$REPO_DIR/deployed/Google"
   mkdir -p "$platform_dir"
 
   # Get public IP from metadata service
@@ -32,7 +31,7 @@ HEREDOC
   chown norsk:norsk "$platform_dir/norsk-config.sh"
 
   # Write vendor file for detection
-  printf 'Google\n' > "$repo_dir/deployed/vendor"
+  printf 'Google\n' > "$REPO_DIR/deployed/vendor"
 
   echo "Platform IP: $DEPLOY_PUBLIC_IP"
   if [[ -n "${DOMAIN_NAME:-}" ]]; then

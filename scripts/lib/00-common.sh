@@ -29,18 +29,15 @@ setup_common() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils git
 
   echo "Cloning repository..."
-  mkdir -p "$INSTALL_DIR"
-  cd "$INSTALL_DIR"
-
-  if [[ -d "$INSTALL_DIR/norsk-studio-docker" ]]; then
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
     echo "Repository already exists, pulling latest..."
-    cd "$INSTALL_DIR/norsk-studio-docker"
+    cd "$INSTALL_DIR"
     git fetch origin
     git checkout "$REPO_BRANCH"
     git pull origin "$REPO_BRANCH"
   else
-    git clone -b "$REPO_BRANCH" "$REPO_URL"
-    cd "$INSTALL_DIR/norsk-studio-docker"
+    git clone -b "$REPO_BRANCH" "$REPO_URL" "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
   fi
 
   echo "Setting ownership..."
@@ -49,7 +46,7 @@ setup_common() {
   # Download example media files
   if [[ "${DOWNLOAD_MEDIA:-true}" == "true" ]]; then
     echo "Downloading example media files..."
-    local media_dir="$INSTALL_DIR/norsk-studio-docker/data/media"
+    local media_dir="$REPO_DIR/data/media"
     mkdir -p "$media_dir"
     for source in action.mp4 wildlife.ts; do
       if curl --fail -L "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" -o "$media_dir/$source"; then

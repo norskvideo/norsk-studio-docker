@@ -168,14 +168,14 @@ journalctl -u norsk-setup.service -f
 
 ### Verify platform detection
 ```bash
-cat /var/norsk-studio/norsk-studio-docker/deployed/vendor  # Should show "Google"
+cat /opt/norsk-studio/deployed/vendor  # Should show "Google"
 sudo dmidecode -s bios-vendor  # Should show "Google"
 ```
 
 ### Verify hardware detection
 ```bash
 lspci | grep -i nvidia   # Check for NVIDIA GPU
-cat /var/norsk-studio/norsk-studio-docker/deployed/Google/norsk-config.sh | grep HARDWARE
+cat /opt/norsk-studio/deployed/Google/norsk-config.sh | grep HARDWARE
 ```
 
 ### Access denied to Secret Manager

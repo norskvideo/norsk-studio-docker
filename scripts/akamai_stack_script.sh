@@ -19,11 +19,8 @@ exec >/root/stackscript.log 2>&1
 apt-get update
 apt-get install -y git
 
-mkdir -p /var/norsk-studio
-cd /var/norsk-studio
-git clone -b git-mgt https://github.com/norskvideo/norsk-studio-docker.git
-
-cd /var/norsk-studio/norsk-studio-docker
+git clone -b git-mgt https://github.com/norskvideo/norsk-studio-docker.git /opt/norsk-studio
+cd /opt/norsk-studio
 
 ./scripts/bootstrap.sh \
   --hardware="${HARDWARE:=auto}" \
