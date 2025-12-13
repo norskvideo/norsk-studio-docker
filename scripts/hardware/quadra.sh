@@ -4,8 +4,6 @@
 # Sourced by bootstrap.sh
 
 setup_hardware() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-
   echo "Setting up Netint Quadra support..."
 
   cd "$INSTALL_DIR"
@@ -52,11 +50,11 @@ setup_hardware() {
   usermod -aG disk norsk
 
   # Configure Norsk with Quadra support
-  echo 'export DEPLOY_HARDWARE="quadra"' >> "$repo_dir/deployed/${PLATFORM^}/norsk-config.sh"
+  echo 'export DEPLOY_HARDWARE="quadra"' >> "$PLATFORM_DIR/norsk-config.sh"
 
   # Install systemd service for libxcoder initialization
   echo "Installing nilibxcoder systemd service..."
-  systemctl enable --now "$repo_dir/deployed/Linode/nilibxcoder.service"
+  systemctl enable --now "$REPO_DIR/deployed/Linode/nilibxcoder.service"
 
   echo "Quadra setup complete"
 }

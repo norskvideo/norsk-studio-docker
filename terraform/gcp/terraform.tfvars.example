@@ -1,0 +1,61 @@
+# Example Terraform variables for Norsk Studio GCP deployment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Required: GCP project ID
+gcp_project = "my-gcp-project"
+
+# Region and zone
+gcp_region = "us-central1"
+# gcp_zone = "us-central1-a"  # Leave empty for auto-select
+
+# Compute instance configuration
+machine_type = "n2-standard-4"  # 4 vCPU, 16GB RAM (~$0.19/hr)
+# machine_type = "n1-standard-4"  # Required for GPU support
+
+# GPU configuration (requires n1-standard machine type)
+# use_gpu   = true
+# gpu_type  = "nvidia-tesla-t4"
+# gpu_count = 1
+
+
+# SSH access (format: "username:ssh-rsa AAAA...")
+ssh_keys = [
+  "ubuntu:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@example.com"
+]
+
+# Network access
+allowed_ssh_cidrs  = ["1.2.3.4/32"]  # Your IP only
+allowed_http_cidrs = ["0.0.0.0/0"]    # Public access
+
+# Required: Norsk license and password
+norsk_license_json = <<EOF
+{
+  "license": "your-license-here"
+}
+EOF
+
+studio_password = "changeme123"  # Min 8 chars
+
+# Optional: Domain and SSL
+# domain_name   = "studio.example.com"
+# certbot_email = "admin@example.com"
+
+# Hardware profile
+hardware_profile = "auto"  # auto|none|nvidia (quadra not supported on GCP)
+
+# Git repository
+repo_branch = "git-mgt"
+
+# Storage
+boot_disk_size = 50  # GB
+boot_disk_type = "pd-balanced"  # pd-standard, pd-balanced, pd-ssd
+
+# Existing network (leave empty to create new VPC)
+# network_name = "my-existing-vpc"
+# subnet_name  = "my-existing-subnet"
+
+# Existing service account (leave empty to create new)
+# service_account_email = "my-sa@my-project.iam.gserviceaccount.com"
+
+# Project labeling
+project_name = "norsk-studio"

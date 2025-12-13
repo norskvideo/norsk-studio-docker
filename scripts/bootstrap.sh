@@ -8,7 +8,7 @@ set -euo pipefail
 # Defaults
 HARDWARE="auto"
 PLATFORM=""
-INSTALL_DIR="/var/norsk-studio"
+INSTALL_DIR="/opt/norsk-studio"
 REPO_URL="https://github.com/norskvideo/norsk-studio-docker.git"
 REPO_BRANCH="git-mgt"
 DOWNLOAD_MEDIA="true"
@@ -26,7 +26,7 @@ Unattended installation of Norsk Studio for cloud deployments.
 OPTIONS:
   --hardware=TYPE       Hardware profile: auto|none|quadra|nvidia (default: auto)
   --platform=NAME       Platform: linode|google|oracle|local (auto-detected if omitted)
-  --install-dir=PATH    Install directory (default: /var/norsk-studio)
+  --install-dir=PATH    Install directory (default: /opt/norsk-studio)
   --repo-branch=BRANCH  Git branch to clone (default: git-mgt)
   --download-media=BOOL Download example media files (default: true)
   --license=JSON        Norsk license JSON string (required)
@@ -137,6 +137,7 @@ fi
 export HARDWARE
 export PLATFORM
 export INSTALL_DIR
+export REPO_DIR="$INSTALL_DIR"
 export REPO_URL
 export REPO_BRANCH
 export DOWNLOAD_MEDIA
@@ -196,10 +197,18 @@ echo ""
 echo "=== Phase 5: Container images ==="
 setup_containers
 
+# Restart Docker if nvidia runtime was configured (deferred from Phase 4)
+if [[ "$HARDWARE" == "nvidia" ]]; then
+  echo ""
+  echo "=== Applying NVIDIA Docker runtime configuration ==="
+  systemctl restart docker
+  echo "Docker restarted with NVIDIA runtime support"
+fi
+
 echo ""
 echo "=== Phase 6: Systemd services ==="
 echo "Enabling and starting systemd services..."
-systemctl enable --now "$INSTALL_DIR/norsk-studio-docker/deployed/systemd/"*.service
+systemctl enable --now "$REPO_DIR/deployed/systemd/"*.service
 
 echo ""
 echo "=== Bootstrap complete ==="

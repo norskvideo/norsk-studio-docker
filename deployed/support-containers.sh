@@ -4,11 +4,14 @@ source "$(dirname "$0")/versions"
 cd "$(dirname "$0")/../support" || exit 1
 
 if [[ "${1:-}" = "up" || "${1:-}" = "start" ]]; then
-  bash ../deployed/check-setup.sh
-  bash ../deployed/check-certs.sh
+  # Rotate OAuth2 cookie secret (invalidates old sessions)
+  ./oauth2/oauth2-proxy.cfg.sh
 
-  # Create log directories with correct permissions
-  mkdir -p "${DEPLOY_LOGS}/nginx-proxy" "${DEPLOY_LOGS}/oauth2-proxy"
+  # Generate nginx domain redirect config
+  ./nginx/generate-domain-redirect.sh
+
+  # Check/generate SSL certificates
+  ../deployed/check-certs.sh
 
   # Make oauth2-proxy logs writable by nonroot user (UID 65532)
   chmod -R 777 "${DEPLOY_LOGS}/oauth2-proxy"

@@ -502,3 +502,768 @@ Goal: centralize installation logic in repo, make stackscripts minimal bootstrap
 11. **EC2 parameters:** Hybrid SSM (secrets) + Tags (non-secrets)
 12. **IaC tool:** Terraform (multi-cloud ready vs CloudFormation lock-in)
 13. **GPU detection:** `lspci | grep -iq nvidia` (mirrors Quadra pattern)
+14. **GCP parameters:** Secret Manager (secrets) + Metadata (non-secrets) - already used by existing platform
+
+---
+
+## GCP (Google Cloud Platform) Terraform Implementation
+
+**Goal:** Mirror AWS Terraform implementation for GCP, leveraging existing Google platform support.
+
+### Current State Analysis
+
+**Existing Google Platform Support:**
+- `scripts/platforms/google.sh` - metadata service integration
+- `deployed/Google/norsk-config.sh` - runtime config
+- `deployed/Google/admin-password.sh` - password from metadata
+- Uses metadata attributes: `deploy_domain_name`, `deploy_certbot_email`, `norsk-studio-admin-password`
+- No Secret Manager integration yet
+- No Terraform IaC
+
+**AWS Implementation (reference):**
+- SSM Parameter Store for secrets
+- EC2 tags for non-secrets
+- Terraform: VPC, subnet, IGW, security group, EIP, IAM role
+- UserData script calls bootstrap.sh
+- 15 input vars, 12 outputs
+- README with deployment guide
+
+### GCP Architecture Design
+
+**GCP Service Mapping:**
+| AWS | GCP Equivalent |
+|-----|---------------|
+| SSM Parameter Store | Secret Manager |
+| EC2 Tags | Instance Metadata |
+| IAM Role | Service Account |
+| Security Group | Firewall Rules |
+| Elastic IP | Static External IP |
+| UserData | startup-script metadata |
+| AMI | Image Family (ubuntu-2404-lts) |
+| EBS Volume | Persistent Disk |
+
+### Implementation Plan
+
+**terraform/gcp/ structure:**
+```
+terraform/gcp/
+├── main.tf              # VPC, subnet, firewall, compute instance, static IP, service account
+├── variables.tf         # 15+ input vars (project, region, zone, machine type, secrets, domain, etc)
+├── outputs.tf           # 12+ outputs (IPs, URLs, SSH command, resource IDs)
+├── startup-script.sh    # Template: clone repo, call bootstrap.sh
+├── terraform.tfvars.example  # Documented examples
+└── README.md            # Deployment guide
+```
+
+**Key Design Decisions:**
+
+1. **Secret Storage:**
+   - Secret Manager for license + password (like AWS SSM)
+   - Service account with `secretmanager.secretAccessor` role
+   - Modify `scripts/platforms/google.sh` to check Secret Manager first, fallback to metadata
+
+2. **Metadata Usage:**
+   - Domain, email → metadata attributes (already implemented)
+   - Hardware profile → metadata attribute (new)
+   - Repo branch → metadata attribute (new)
+
+3. **Networking:**
+   - Auto-create VPC + subnet (like AWS), OR use existing
+   - Firewall rules: 22 (SSH), 80 (HTTP), 443 (HTTPS), 6791 (WebSocket), 5001/udp
+   - Static external IP for stable public address
+
+4. **Compute:**
+   - Default: n2-standard-4 (4 vCPU, 16GB RAM, ~$0.19/hr)
+   - GPU: n1-standard-4 + nvidia-tesla-t4 (~$0.35/hr + $0.35/hr GPU)
+   - Image: ubuntu-2404-noble-amd64 (matches AWS)
+   - Boot disk: 50GB SSD (pd-ssd or pd-balanced)
+
+5. **Service Account:**
+   - Custom SA with minimal permissions
+   - Roles: `secretmanager.secretAccessor`, `logging.logWriter`, `monitoring.metricWriter`
+
+6. **Startup Script:**
+   - Similar to AWS UserData
+   - Fetch secrets from Secret Manager via gcloud CLI
+   - Fetch config from metadata
+   - Clone repo, run bootstrap.sh
+
+### Files to Create/Modify
+
+**New Files:**
+1. `terraform/gcp/main.tf` (~300 lines)
+   - Provider config (project, region)
+   - VPC + subnet (conditional, like AWS)
+   - Firewall rules (ingress/egress)
+   - Service account + IAM bindings
+   - Secret Manager secrets
+   - Static external IP
+   - Compute instance
+
+2. `terraform/gcp/variables.tf` (~120 lines)
+   - gcp_project (required)
+   - gcp_region (default: us-central1)
+   - gcp_zone (default: us-central1-a)
+   - machine_type (default: n2-standard-4)
+   - image_family (default: ubuntu-2404-noble-amd64)
+   - ssh_user (default: ubuntu)
+   - norsk_license_json (sensitive)
+   - studio_password (sensitive)
+   - domain_name, certbot_email
+   - hardware_profile (auto|none|quadra|nvidia)
+   - repo_branch (default: git-mgt)
+   - boot_disk_size (default: 50)
+   - use_gpu (bool, default: false)
+   - gpu_type (default: nvidia-tesla-t4)
+   - network_name, subnet_name (optional, for existing VPC)
+   - project_name (for labels)
+
+3. `terraform/gcp/outputs.tf` (~70 lines)
+   - instance_id, instance_name
+   - public_ip, private_ip
+   - norsk_studio_url
+   - ssh_command
+   - startup_script_log (gcloud compute instances get-serial-port-output)
+   - vpc_id, subnet_id
+   - firewall_rule_names
+   - service_account_email
+   - secret_manager_ids
+
+4. `terraform/gcp/startup-script.sh` (~80 lines)
+   - Install gcloud CLI (if not present)
+   - Fetch license + password from Secret Manager
+   - Fetch domain, email, hardware from metadata
+   - Install git
+   - Clone repo
+   - Run bootstrap.sh
+
+5. `terraform/gcp/terraform.tfvars.example` (~50 lines)
+   - Examples for all scenarios:
+     - Software-only
+     - NVIDIA GPU (n1-standard-4 + T4)
+     - Custom VPC
+     - Domain + SSL
+
+6. `terraform/gcp/README.md` (~250 lines)
+   - Prerequisites (gcloud, terraform, project setup)
+   - Quick start
+   - Machine types + GPU options
+   - Cost estimation
+   - Troubleshooting (startup script logs, service account permissions)
+   - Cleanup
+
+**Modified Files:**
+1. `scripts/platforms/google.sh` (~60 lines, +20)
+   - Add Secret Manager fetch for license + password
+   - Check if `gcloud` available
+   - Fetch `/norsk/license` and `/norsk/password` from Secret Manager
+   - Fallback to metadata for password (backward compat)
+   - Export vars for bootstrap.sh
+
+2. `scripts/lib/10-secrets.sh` (optional enhancement)
+   - Already handles $STUDIO_PASSWORD from platform
+   - May need adjustment if Secret Manager returns different format
+
+### Terraform Resource Breakdown
+
+**main.tf resources:**
+```hcl
+# Provider
+provider "google" { project, region }
+
+# Data sources
+data "google_compute_image" "ubuntu_2404"  # Image lookup
+data "google_compute_zones" "available"     # Zone list
+
+# Networking (conditional)
+resource "google_compute_network" "vpc"             # VPC
+resource "google_compute_subnetwork" "subnet"       # Subnet
+resource "google_compute_firewall" "allow_ssh"      # Port 22
+resource "google_compute_firewall" "allow_http"     # Port 80
+resource "google_compute_firewall" "allow_https"    # Port 443
+resource "google_compute_firewall" "allow_ws"       # Port 6791
+resource "google_compute_firewall" "allow_udp"      # Port 5001
+
+# IAM
+resource "google_service_account" "norsk_studio"    # Service account
+resource "google_project_iam_member" "secret_accessor"  # Secret Manager role
+
+# Secrets
+resource "google_secret_manager_secret" "norsk_license"       # License secret
+resource "google_secret_manager_secret_version" "license_v1"  # License value
+resource "google_secret_manager_secret" "studio_password"     # Password secret
+resource "google_secret_manager_secret_version" "password_v1" # Password value
+
+# Compute
+resource "google_compute_address" "static_ip"       # Static external IP
+resource "google_compute_instance" "norsk_studio"   # VM instance
+  # metadata: startup-script, deploy_domain_name, deploy_certbot_email, hardware_profile
+  # service_account: email, scopes
+  # network_interface: subnetwork, access_config (static IP)
+  # boot_disk: size, type, image
+  # (optional) guest_accelerator for GPU
+```
+
+### Hardware Profile Support
+
+**CPU-only (default):**
+- Machine: n2-standard-4
+- Cost: ~$0.19/hr
+
+**NVIDIA GPU:**
+- Machine: n1-standard-4 (GPU requires N1 family)
+- Accelerator: nvidia-tesla-t4 (count: 1)
+- GPU drivers: installed by hardware/nvidia.sh
+- Cost: ~$0.19/hr + $0.35/hr = $0.54/hr
+
+**Quadra:**
+- Not typically available on GCP
+- Would require bare metal or custom image
+- Likely not supported in initial implementation
+
+### Testing Strategy
+
+1. **Validation:**
+   - `terraform validate`
+   - `terraform plan` (check resource count)
+
+2. **Deployment:**
+   - Test with software-only first
+   - Test with NVIDIA GPU
+   - Test with custom VPC
+   - Test with domain + SSL
+
+3. **Verification:**
+   - Check startup script logs: `gcloud compute instances get-serial-port-output`
+   - SSH to instance, verify services running
+   - Access Studio via public IP
+   - Verify Secret Manager access
+
+### Cost Estimation
+
+**Software-only (n2-standard-4):**
+- Compute: ~$0.19/hr (~$137/mo)
+- Disk 50GB SSD: ~$8.50/mo
+- Static IP: ~$7.50/mo (if reserved but unused)
+- **Total: ~$153/mo**
+
+**GPU (n1-standard-4 + T4):**
+- Compute: ~$0.19/hr (~$137/mo)
+- GPU: ~$0.35/hr (~$252/mo)
+- Disk: ~$8.50/mo
+- Static IP: ~$7.50/mo
+- **Total: ~$405/mo**
+
+### Implementation Phases
+
+**Phase 1: Core Terraform Structure**
+- Create terraform/gcp/ directory
+- main.tf: provider, data sources, locals
+- variables.tf: all input vars
+- outputs.tf: all outputs
+- terraform.tfvars.example
+
+**Phase 2: Networking & IAM**
+- VPC + subnet (conditional on existing network)
+- Firewall rules (SSH, HTTP, HTTPS, WS, UDP)
+- Service account + IAM bindings
+
+**Phase 3: Secret Manager**
+- Secret resources for license + password
+- IAM binding for service account access
+
+**Phase 4: Compute Instance**
+- Static external IP
+- Compute instance resource
+- Boot disk config
+- Metadata for startup script + config
+- (Optional) GPU accelerator support
+
+**Phase 5: Startup Script**
+- startup-script.sh template
+- Fetch secrets from Secret Manager
+- Fetch config from metadata
+- Clone repo + bootstrap.sh call
+- GPU reboot logic (if needed)
+
+**Phase 6: Platform Script Enhancement**
+- Modify scripts/platforms/google.sh
+- Add Secret Manager fetch (gcloud secrets)
+- Maintain backward compat with metadata
+
+**Phase 7: Documentation**
+- README.md with deployment guide
+- Troubleshooting section
+- Cost breakdown
+- GPU setup instructions
+
+**Phase 8: Testing**
+- Validate terraform
+- Deploy test instance
+- Verify all components
+- Document any issues
+
+### Unresolved Questions
+
+1. **Quadra support on GCP?** (likely no - rare/unsupported)
+2. ~~**GPU driver auto-install** - does hardware/nvidia.sh work on GCP Ubuntu 24.04?~~ → Planning now
+3. **Secret Manager regional replication** - single region or multi-region? → auto replication used
+4. **VPC peering** - support connecting to existing peered VPCs? → yes, via network_name/subnet_name vars
+5. **Custom service account** - user-provided SA or always create new? → both supported via service_account_email var
+6. **Metadata vs labels** - instance metadata for runtime config, labels for organization? → yes, implemented
+7. **Startup script size limit** - inline vs GCS bucket? (64KB limit) → inline template, under limit
+8. ~~**Ubuntu 24.04 image** - confirm family name `ubuntu-2404-noble-amd64`?~~ → ubuntu-2404-lts-amd64 (confirmed in main.tf)
+
+---
+
+## NVIDIA Driver Implementation for GCP
+
+**Goal:** Implement `scripts/hardware/nvidia.sh` for GPU-accelerated Norsk Studio on GCP.
+
+**User Requirements:**
+- Driver version >= 575
+- nvidia-smi available
+- Container runtime integration (Docker/Norsk)
+
+### Current State
+
+**Terraform (GCP):**
+- GPU support: n1-standard-4 + nvidia-tesla-t4 (main.tf:238-244)
+- Metadata: hardware_profile passed to startup script
+- Reboot logic: startup-script.sh:75-78 reboots if `DEPLOY_HARDWARE="nvidia"`
+
+**Stub Implementation:**
+- `scripts/hardware/nvidia.sh`: 11 lines, exits 1 with TODO
+- No driver install, no container runtime config
+
+**Reference (Quadra):**
+- `scripts/hardware/quadra.sh`: downloads binaries, compiles deps, systemd service, usermod
+
+### Research Findings
+
+**NVIDIA Driver 575+ on Ubuntu 24.04:**
+- Officially backported to Ubuntu repos ([UbuntuHandbook](https://ubuntuhandbook.org/index.php/2025/07/ubuntu-adding-nvidia-575-driver-support-for-24-04-22-04-lts/))
+- Version 575.57.08 available ([NVIDIA docs](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-575-57-08/index.html))
+- Multiple install methods: ubuntu-drivers, apt, CUDA repo
+- Includes nvidia-smi utility
+
+**Container Runtime Integration:**
+- nvidia-container-toolkit v1.17.7+ supports Ubuntu 24.04 ([Lindevs](https://lindevs.com/install-nvidia-container-toolkit-on-ubuntu))
+- Enables `docker run --gpus` flag
+- Requires Docker runtime config: `nvidia-ctk runtime configure --runtime=docker`
+
+**GCP Considerations:**
+- GCP provides automated install scripts ([GCP docs](https://docs.cloud.google.com/compute/docs/gpus/install-drivers-gpu))
+- Scripts may not fully support Ubuntu 24.04 secure boot yet
+- Recommendation: use Ubuntu native methods for 24.04
+
+### Key Challenges and Analysis
+
+**1. Driver Installation Method**
+
+**Options:**
+- **A) ubuntu-drivers autoinstall** - detects GPU, picks best driver
+- **B) apt install nvidia-driver-575-server** - explicit version control
+- **C) GCP automated script** - cloud-native but may lag Ubuntu 24.04 support
+- **D) CUDA repository** - includes CUDA toolkit (unnecessary for Norsk)
+
+**Recommendation: Option B (apt explicit install)**
+- Guarantees version >= 575
+- Server variant optimized for datacenter GPUs (T4, A10G)
+- No CUDA overhead (Norsk uses driver APIs only)
+- Ubuntu repos = tested/stable for 24.04
+
+**2. Reboot Requirement**
+
+Kernel modules (nvidia.ko, nvidia-uvm.ko) require reboot after install.
+
+**Current flow:**
+- startup-script.sh:75-78 checks `DEPLOY_HARDWARE="nvidia"` → reboot
+- Second boot: services start with GPU available
+
+**3. Container Runtime Configuration**
+
+**Steps:**
+1. Install nvidia-container-toolkit from NVIDIA repo
+2. Run `nvidia-ctk runtime configure --runtime=docker`
+3. Reload docker: `systemctl restart docker`
+4. Test: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+
+**4. Prerequisites**
+
+- `linux-headers-$(uname -r)` - kernel headers for DKMS
+- `build-essential` - compiler for module builds
+- Docker installed - already handled by 00-common.sh
+
+**5. Error Handling**
+
+- Verify GPU detected: `lspci | grep -i nvidia`
+- Check driver loaded: `nvidia-smi` (post-reboot)
+- Verify Docker integration: `docker run --gpus all`
+
+### Implementation Design
+
+**scripts/hardware/nvidia.sh structure:**
+
+```bash
+#!/usr/bin/env bash
+# NVIDIA GPU hardware profile
+# Installs driver >= 575 + container toolkit
+
+setup_hardware() {
+  # 1. Verify GPU present
+  # 2. Install prerequisites (headers, build-essential)
+  # 3. Install NVIDIA driver 575-server from Ubuntu repos
+  # 4. Install nvidia-container-toolkit from NVIDIA repo
+  # 5. Configure Docker runtime
+  # 6. Mark reboot needed (checked by startup-script.sh)
+}
+```
+
+**Driver installation:**
+```bash
+apt-get update
+apt-get install -y linux-headers-$(uname -r) build-essential
+apt-get install -y nvidia-driver-575-server nvidia-utils-575-server
+```
+
+**Container toolkit:**
+```bash
+# Add NVIDIA repo
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+apt-get update
+apt-get install -y nvidia-container-toolkit
+
+# Configure Docker
+nvidia-ctk runtime configure --runtime=docker
+systemctl restart docker
+```
+
+**Reboot coordination:**
+- nvidia.sh doesn't reboot itself (called during bootstrap)
+- startup-script.sh detects `DEPLOY_HARDWARE="nvidia"` in norsk-config.sh
+- Reboots once after full bootstrap completes
+- Post-reboot: norsk.service starts with GPU access
+
+### Opinions & Recommendations
+
+**Driver Version Strategy:**
+- **Target: 575-server (not 575)** - server variant for stability
+- Justification: T4/A10G are datacenter GPUs, need server drivers
+- Alternative: 570-server (older but stable) if 575 issues found
+
+**Testing Strategy:**
+1. **Pre-reboot verification:**
+   - Driver installed: `dpkg -l | grep nvidia-driver-575`
+   - Toolkit installed: `which nvidia-ctk`
+   - Docker config: `cat /etc/docker/daemon.json | grep nvidia`
+
+2. **Post-reboot verification:**
+   - Driver loaded: `nvidia-smi` shows GPU + driver version
+   - Docker integration: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+
+**Risks & Mitigations:**
+- **Risk:** 575 not yet in Ubuntu repos for 24.04
+  - **Mitigation:** Fallback to 570-server, or use graphics-drivers PPA
+- **Risk:** Secure boot conflicts with unsigned modules
+  - **Mitigation:** GCP instances typically don't use secure boot, or use signed ubuntu-drivers
+- **Risk:** Container toolkit repo changes
+  - **Mitigation:** Pin specific version if needed
+
+### Implementation Plan
+
+**Phase 1: nvidia.sh Core Implementation**
+- [ ] Replace stub with driver install logic
+  - Verify GPU present via lspci
+  - Install linux-headers + build-essential
+  - Install nvidia-driver-575-server + nvidia-utils-575-server
+  - Exit cleanly if no GPU found (hardware=auto fallback)
+  - Success: driver packages installed, no errors
+
+**Phase 2: Container Runtime Integration**
+- [ ] Add nvidia-container-toolkit installation
+  - Add NVIDIA repo w/ GPG key
+  - Install nvidia-container-toolkit package
+  - Configure Docker runtime via nvidia-ctk
+  - Restart docker daemon
+  - Success: `nvidia-ctk --version` works, docker config has nvidia runtime
+
+**Phase 3: Verification & Testing**
+- [ ] Add pre-reboot checks
+  - Verify driver packages installed
+  - Verify toolkit installed
+  - Verify docker daemon.json configured
+  - Success: all checks pass before reboot
+
+**Phase 4: Post-Reboot Validation**
+- [ ] Test on GCP with T4
+  - Deploy via terraform w/ use_gpu=true
+  - SSH post-reboot, check nvidia-smi output
+  - Test docker GPU access
+  - Verify Norsk can access GPU
+  - Success: nvidia-smi shows driver 575+, docker test passes
+
+**Phase 5: Documentation**
+- [ ] Update README.md
+  - Document GPU setup
+  - Add nvidia-smi verification steps
+  - Add troubleshooting section
+  - Success: clear GPU deployment instructions
+
+### Implementation Decisions
+
+1. **Driver version:** Fail if 575-server unavailable (no fallback)
+2. **Install method:** Explicit `apt install nvidia-driver-575-server`
+3. **Nouveau blacklist:** Skip (package handles automatically)
+4. **CUDA toolkit:** No (Norsk uses Video Codec SDK only)
+5. **Test image:** nvidia/cuda:12.6.3-base-ubuntu24.04
+6. **Docker config:** nvidia-ctk writes daemon.json, Compose reads it via `driver: nvidia`
+7. **Norsk config:** yaml/hardware-devices/nvidia.yaml already correct (no changes)
+
+### High-Level Task Breakdown
+
+**Phase 1: nvidia.sh Implementation** ✓
+- [x] Verify GPU present via lspci
+- [x] Install prerequisites (linux-headers, build-essential)
+- [x] Check nvidia-driver-575-server availability
+- [x] Install nvidia-driver-575-server + nvidia-utils-575-server
+- [x] Add NVIDIA container toolkit repo
+- [x] Install nvidia-container-toolkit
+- [x] Configure Docker runtime via nvidia-ctk
+- [x] Restart Docker daemon
+- [x] Export DEPLOY_HARDWARE="nvidia" to norsk-config.sh
+- [x] Success: packages installed, docker configured, no errors
+
+**Phase 2: Testing on GCP**
+- [ ] Deploy test instance via terraform (use_gpu=true, n1-standard-4 + T4)
+- [ ] SSH post-reboot, verify nvidia-smi shows driver 575+
+- [ ] Test docker GPU access: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+- [ ] Verify Norsk containers start with GPU access
+- [ ] Check norsk logs for GPU device detection
+- [ ] Success: full GPU stack operational
+
+**Phase 3: Documentation**
+- [ ] Update terraform/gcp/README.md with GPU validation steps
+- [ ] Add troubleshooting section for GPU issues
+- [ ] Document nvidia-smi verification
+- [ ] Success: clear deployment & validation instructions
+
+### Detailed Implementation Plan
+
+**scripts/hardware/nvidia.sh structure:**
+
+```bash
+#!/usr/bin/env bash
+# NVIDIA GPU hardware profile
+# Installs driver 575-server + container toolkit for Ubuntu 24.04
+
+setup_hardware() {
+  echo "Setting up NVIDIA GPU support..."
+
+  # 1. Verify GPU present
+  if ! lspci | grep -qi nvidia; then
+    echo "No NVIDIA GPU detected via lspci"
+    exit 1
+  fi
+
+  # 2. Install prerequisites
+  apt-get update
+  apt-get install -y linux-headers-$(uname -r) build-essential
+
+  # 3. Check driver availability
+  if ! apt-cache policy nvidia-driver-575-server | grep -q 'Candidate:'; then
+    echo "ERROR: nvidia-driver-575-server not available in repos"
+    echo "Available drivers:"
+    apt-cache search nvidia-driver | grep server
+    exit 1
+  fi
+
+  # 4. Install NVIDIA driver 575-server
+  echo "Installing NVIDIA driver 575-server..."
+  apt-get install -y nvidia-driver-575-server nvidia-utils-575-server
+
+  # 5. Add NVIDIA container toolkit repo
+  echo "Adding NVIDIA container toolkit repository..."
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+    gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+  curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+  # 6. Install nvidia-container-toolkit
+  apt-get update
+  apt-get install -y nvidia-container-toolkit
+
+  # 7. Configure Docker runtime
+  echo "Configuring Docker for NVIDIA runtime..."
+  nvidia-ctk runtime configure --runtime=docker
+  systemctl restart docker
+
+  # 8. Export hardware config
+  echo 'export DEPLOY_HARDWARE="nvidia"' >> "$REPO_DIR/deployed/${PLATFORM^}/norsk-config.sh"
+
+  echo "NVIDIA setup complete - reboot required for driver to load"
+}
+```
+
+**Verification checks (manual after deployment):**
+```bash
+# Post-reboot verification
+nvidia-smi  # Should show driver 575+, GPU model, memory
+
+# Docker GPU test
+docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi
+
+# Norsk container check
+docker ps | grep norsk-media
+docker logs norsk-media | grep -i nvidia
+```
+
+### Testing Strategy
+
+**Pre-deployment validation:**
+- Syntax check: `bash -n scripts/hardware/nvidia.sh`
+- Mock test: run with `lspci` stubbed (test/install/mock-hardware/nvidia.sh)
+
+**GCP deployment test:**
+1. Create terraform.tfvars:
+   ```hcl
+   use_gpu = true
+   machine_type = "n1-standard-4"
+   gpu_type = "nvidia-tesla-t4"
+   hardware_profile = "auto"  # or "nvidia"
+   ```
+2. `terraform apply`
+3. Monitor: `gcloud compute instances get-serial-port-output` (watch for reboot)
+4. SSH post-reboot, run verification commands
+5. Test Norsk workflow with GPU encode/decode
+
+**Success criteria:**
+- ✓ nvidia-smi shows driver >= 575
+- ✓ Docker test container can access GPU
+- ✓ norsk-media container starts without errors
+- ✓ GPU shows up in Norsk Studio hardware panel
+- ✓ Can create workflow using NVIDIA encode node
+
+### Risk Mitigation
+
+**Risk 1:** 575-server not in Ubuntu 24.04 repos yet
+- **Check:** Run `apt-cache policy nvidia-driver-575-server` on fresh 24.04 instance
+- **Mitigation:** If unavailable, add graphics-drivers PPA or use 570-server (update script)
+
+**Risk 2:** Container toolkit repo changes URL/format
+- **Mitigation:** Pin to stable branch (already using /stable/deb/)
+
+**Risk 3:** Reboot loop if driver fails to load
+- **Mitigation:** Check dmesg/journalctl for nvidia module errors, test on single instance first
+
+**Risk 4:** Docker restart breaks running containers
+- **Mitigation:** Occurs during bootstrap (no containers running yet), safe
+
+### Sources
+
+- [UbuntuHandbook - NVIDIA 575 Driver Support](https://ubuntuhandbook.org/index.php/2025/07/ubuntu-adding-nvidia-575-driver-support-for-24-04-22-04-lts/)
+- [NVIDIA Data Center Driver 575.57.08 Release Notes](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-575-57-08/index.html)
+- [Lindevs - NVIDIA Container Toolkit Ubuntu 24.04](https://lindevs.com/install-nvidia-container-toolkit-on-ubuntu)
+- [GCP - Install GPU Drivers](https://docs.cloud.google.com/compute/docs/gpus/install-drivers-gpu)
+
+### Executor's Feedback
+
+**Phase 1 Complete (scripts/hardware/nvidia.sh implementation):**
+- Implemented 69-line script replacing 11-line stub
+- GPU detection via lspci (exits if no GPU found)
+- Prerequisites: linux-headers, build-essential, pciutils
+- Driver check: fails fast if nvidia-driver-575-server unavailable
+- Driver install: nvidia-driver-575-server + nvidia-utils-575-server
+- Container toolkit: NVIDIA repo + nvidia-container-toolkit package
+- Docker config: nvidia-ctk runtime configure + systemd restart
+- Hardware flag: exports DEPLOY_HARDWARE="nvidia" to norsk-config.sh
+- Uses DEBIAN_FRONTEND=noninteractive (matches quadra.sh pattern)
+- Syntax validated: bash -n passes
+
+**Ready for Phase 2 (GCP testing):**
+- Need terraform.tfvars with use_gpu=true, n1-standard-4, nvidia-tesla-t4
+- Need to verify 575-server availability on fresh Ubuntu 24.04 GCP instance
+- Need to test full bootstrap flow: driver install → reboot → nvidia-smi verification
+
+**Implementation notes:**
+- Added pciutils to prerequisites (provides lspci if not present)
+- Error messages to stderr with clear diagnostics
+- Reboot message at end (handled by startup-script.sh:75-78)
+
+**GCP terraform enhancement:**
+- Added `startup_script_log_ssh` output to terraform/gcp/outputs.tf
+- Matches AWS `userdata_log` pattern (SSH tail -f)
+- Kept existing `startup_script_log` (serial console, works before SSH ready)
+- Both methods available: serial console + SSH tail
+
+**AWS EC2 testing status:**
+- CPU test (t3.xlarge): ✓ Passed
+- GPU test prep: terraform.tfvars updated to g4dn.xlarge (NVIDIA T4)
+- Ready for GPU deployment
+
+**Expected GPU bootstrap flow:**
+1. Terraform creates g4dn.xlarge instance with T4 GPU
+2. UserData runs bootstrap.sh --hardware=auto
+3. bootstrap.sh detects GPU via lspci → calls nvidia.sh
+4. nvidia.sh installs driver 575-server + container toolkit
+5. UserData detects DEPLOY_HARDWARE="nvidia" → reboots
+6. Post-reboot: nvidia-smi available, Docker configured with nvidia runtime
+7. Norsk containers start with GPU access via yaml/hardware-devices/nvidia.yaml
+
+**nvidia.sh fix (driver availability check):**
+- **Issue:** `apt-cache policy` grep for 'Candidate:' failed even though 575-server exists
+- **Root cause:** Policy check unreliable, package metadata not matching expected pattern
+- **Fix:** Use `apt-cache show` instead, try multiple versions (580, 575)
+- **Logic:** Try 580-server first (newer), fallback to 575-server
+- **Result:** More robust, supports newer drivers automatically
+- Script now installs best available driver >= 575
+
+**Bootstrap optimization (parallel container pulls):**
+- **Issue:** Phase 5 (container pulls) runs 3 sequential docker pulls - slow
+- **Optimization:** Run all 3 pulls in parallel using background jobs
+- **Changes:** scripts/lib/30-containers.sh (17 → 29 lines)
+- **Pulls parallelized:**
+  1. Norsk containers (norsk-containers.sh pull)
+  2. Support containers (support-containers.sh pull)
+  3. htpasswd utility (docker pull direct)
+- **Implementation:** Background each pull (&), wait for all PIDs
+- **Expected speedup:** ~3x faster on container pull phase
+- **Safe:** Docker already installed, no dependencies between pulls
+
+**Bootstrap optimization (defer docker restart):**
+- **Issue:** nvidia.sh restarts docker immediately after config, blocking until restart complete (2-5 sec)
+- **Analysis:** Container pulls don't need nvidia runtime (just downloading images)
+- **Optimization:** Defer docker restart until after pulls complete
+- **Changes:**
+  - scripts/hardware/nvidia.sh: removed `systemctl restart docker`
+  - scripts/bootstrap.sh: added restart between Phase 5 and Phase 6
+- **New flow:**
+  - Phase 4: Install driver + toolkit, configure daemon.json (no restart)
+  - Phase 5: Pull containers in parallel (no delay)
+  - Phase 5.5: Restart docker to apply nvidia runtime config
+  - Phase 6: Start services (nvidia runtime active)
+- **Expected speedup:** Removes restart from critical path, parallelizes with driver install
+- **Safe:** Runtime only needed when containers START (Phase 6), not for pulls
+
+**PLATFORM_DIR fix (case mismatch bug):**
+- **Issue:** Hardware scripts couldn't write to norsk-config.sh
+- **Root cause:** `${PLATFORM^}` only capitalizes first letter
+  - `aws` → `Aws` (should be `AWS`)
+  - Platform dirs: AWS, Google, Linode, Oracle, local (inconsistent case)
+- **Fix:** Platform scripts export PLATFORM_DIR, hardware scripts use it
+- **Changes:**
+  - All 5 platform scripts: `export PLATFORM_DIR="$REPO_DIR/deployed/{Platform}"`
+  - Removed `local platform_dir`, use exported PLATFORM_DIR throughout
+  - Added `mkdir -p "$PLATFORM_DIR"` where missing (linode, oracle, local)
+  - nvidia.sh: use `$PLATFORM_DIR/norsk-config.sh` (was `${PLATFORM^}`)
+  - quadra.sh: use `$PLATFORM_DIR/norsk-config.sh` (was `${PLATFORM^}`)
+- **Result:** Hardware config now writes correctly on all platforms
+- **Syntax validated:** All 7 modified scripts pass bash -n
+
+### Background and Motivation

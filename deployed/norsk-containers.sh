@@ -67,6 +67,7 @@ args=(
     --network-mode host
     --public-url "${PUBLIC_URL_PREFIX:-https://$DEPLOY_HOSTNAME/norsk}"
     --studio-url "${STUDIO_URL_PREFIX:-https://$DEPLOY_HOSTNAME/studio}"
+    --logs "${DEPLOY_LOGS}"
     --set-norsk-user
 )
 

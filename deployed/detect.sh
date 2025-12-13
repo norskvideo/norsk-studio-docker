@@ -12,8 +12,8 @@ if [[ -f /sys/class/dmi/id/bios_vendor ]]; then
       echo "AWS"
       ;;
     *)
-      if [[ -f /var/norsk-studio/norsk-studio-docker/deployed/vendor ]]; then
-        cat /var/norsk-studio/norsk-studio-docker/deployed/vendor
+      if [[ -f /opt/norsk-studio/deployed/vendor ]]; then
+        cat /opt/norsk-studio/deployed/vendor
       else
         echo "local"
       fi

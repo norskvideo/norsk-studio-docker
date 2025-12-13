@@ -50,11 +50,8 @@ CERTBOT_EMAIL=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" \
 HARDWARE_OVERRIDE="${hardware_override}"
 
 # Clone repo
-mkdir -p /var/norsk-studio
-cd /var/norsk-studio
-git clone -b ${repo_branch} https://github.com/norskvideo/norsk-studio-docker.git
-
-cd /var/norsk-studio/norsk-studio-docker
+git clone -b ${repo_branch} https://github.com/norskvideo/norsk-studio-docker.git /opt/norsk-studio
+cd /opt/norsk-studio
 
 # Run bootstrap
 ./scripts/bootstrap.sh \

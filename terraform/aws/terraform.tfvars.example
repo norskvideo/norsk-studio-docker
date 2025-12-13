@@ -2,9 +2,14 @@
 # Copy to terraform.tfvars and fill in your values
 
 # Required
-key_name            = "my-ec2-keypair"
-norsk_license_json  = "{\"license\":\"your-license-key-here\"}"
-studio_password     = "changeme123"
+key_name           = "my-ec2-keypair"
+studio_password    = "changeme123"
+
+norsk_license_json = <<EOF
+{
+  "license": "your-license-here"
+}
+EOF
 
 # Optional - AWS region
 aws_region = "us-east-1"
@@ -12,7 +17,6 @@ aws_region = "us-east-1"
 # Optional - Instance type (use GPU instances for NVIDIA hardware)
 # Software-only: t3.xlarge, t3.2xlarge
 # NVIDIA GPU: g4dn.xlarge (T4), g5.xlarge (A10G)
-# Quadra: t3.xlarge (Netint card must be installed separately)
 instance_type = "t3.xlarge"
 
 # Optional - Hardware profile

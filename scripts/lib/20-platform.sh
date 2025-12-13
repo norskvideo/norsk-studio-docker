@@ -4,8 +4,6 @@
 # Sourced by bootstrap.sh
 
 setup_platform() {
-  local repo_dir="$INSTALL_DIR/norsk-studio-docker"
-
   # Auto-detect platform if not specified
   if [[ -z "$PLATFORM" ]]; then
     if [[ -f /sys/class/dmi/id/bios_vendor ]]; then
@@ -46,7 +44,7 @@ setup_platform() {
   source "$platform_script"
 
   # Create platform config directory
-  local platform_dir="$repo_dir/deployed/${PLATFORM^}"
+  local platform_dir="$REPO_DIR/deployed/${PLATFORM^}"
   mkdir -p "$platform_dir"
 
   # Call platform-specific setup

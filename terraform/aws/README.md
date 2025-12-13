@@ -149,7 +149,7 @@ journalctl -u norsk-setup.service -f
 
 ### Verify platform detection
 ```bash
-cat /var/norsk-studio/norsk-studio-docker/deployed/vendor  # Should show "AWS"
+cat /opt/norsk-studio/deployed/vendor  # Should show "AWS"
 cat /sys/class/dmi/id/bios_vendor  # Should show "Amazon EC2"
 ```
 
@@ -157,7 +157,7 @@ cat /sys/class/dmi/id/bios_vendor  # Should show "Amazon EC2"
 ```bash
 lspci | grep -i nvidia   # Check for NVIDIA GPU
 lspci | grep -i netint   # Check for Quadra
-cat /var/norsk-studio/norsk-studio-docker/deployed/AWS/norsk-config.sh | grep HARDWARE
+cat /opt/norsk-studio/deployed/AWS/norsk-config.sh | grep HARDWARE
 ```
 
 ### Access denied to SSM parameters
