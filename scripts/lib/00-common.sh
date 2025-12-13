@@ -21,7 +21,7 @@ setup_common() {
   fi
 
   echo "Creating logs directory..."
-  mkdir -p /var/log/norsk
+  mkdir -p /var/log/norsk/{norsk-media,norsk-studio,nginx-proxy,oauth2-proxy,certbot-dns}
   chown -R norsk:norsk /var/log/norsk
 
   echo "Installing system dependencies..."

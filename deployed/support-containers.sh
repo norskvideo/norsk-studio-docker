@@ -7,9 +7,6 @@ if [[ "${1:-}" = "up" || "${1:-}" = "start" ]]; then
   bash ../deployed/check-setup.sh
   bash ../deployed/check-certs.sh
 
-  # Create log directories with correct permissions
-  mkdir -p "${DEPLOY_LOGS}/nginx-proxy" "${DEPLOY_LOGS}/oauth2-proxy"
-
   # Make oauth2-proxy logs writable by nonroot user (UID 65532)
   chmod -R 777 "${DEPLOY_LOGS}/oauth2-proxy"
 fi
