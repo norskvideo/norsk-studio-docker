@@ -1196,4 +1196,44 @@ docker logs norsk-media | grep -i nvidia
 - Error messages to stderr with clear diagnostics
 - Reboot message at end (handled by startup-script.sh:75-78)
 
+**GCP terraform enhancement:**
+- Added `startup_script_log_ssh` output to terraform/gcp/outputs.tf
+- Matches AWS `userdata_log` pattern (SSH tail -f)
+- Kept existing `startup_script_log` (serial console, works before SSH ready)
+- Both methods available: serial console + SSH tail
+
+**AWS EC2 testing status:**
+- CPU test (t3.xlarge): ✓ Passed
+- GPU test prep: terraform.tfvars updated to g4dn.xlarge (NVIDIA T4)
+- Ready for GPU deployment
+
+**Expected GPU bootstrap flow:**
+1. Terraform creates g4dn.xlarge instance with T4 GPU
+2. UserData runs bootstrap.sh --hardware=auto
+3. bootstrap.sh detects GPU via lspci → calls nvidia.sh
+4. nvidia.sh installs driver 575-server + container toolkit
+5. UserData detects DEPLOY_HARDWARE="nvidia" → reboots
+6. Post-reboot: nvidia-smi available, Docker configured with nvidia runtime
+7. Norsk containers start with GPU access via yaml/hardware-devices/nvidia.yaml
+
+**nvidia.sh fix (driver availability check):**
+- **Issue:** `apt-cache policy` grep for 'Candidate:' failed even though 575-server exists
+- **Root cause:** Policy check unreliable, package metadata not matching expected pattern
+- **Fix:** Use `apt-cache show` instead, try multiple versions (580, 575)
+- **Logic:** Try 580-server first (newer), fallback to 575-server
+- **Result:** More robust, supports newer drivers automatically
+- Script now installs best available driver >= 575
+
+**Bootstrap optimization (parallel container pulls):**
+- **Issue:** Phase 5 (container pulls) runs 3 sequential docker pulls - slow
+- **Optimization:** Run all 3 pulls in parallel using background jobs
+- **Changes:** scripts/lib/30-containers.sh (17 → 29 lines)
+- **Pulls parallelized:**
+  1. Norsk containers (norsk-containers.sh pull)
+  2. Support containers (support-containers.sh pull)
+  3. htpasswd utility (docker pull direct)
+- **Implementation:** Background each pull (&), wait for all PIDs
+- **Expected speedup:** ~3x faster on container pull phase
+- **Safe:** Docker already installed, no dependencies between pulls
+
 ### Background and Motivation

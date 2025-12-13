@@ -25,21 +25,32 @@ setup_hardware() {
       build-essential \
       pciutils
 
-  # 3. Check driver availability
-  echo "Checking for nvidia-driver-575-server availability..."
-  if ! apt-cache policy nvidia-driver-575-server | grep -q 'Candidate:'; then
-    echo "ERROR: nvidia-driver-575-server not available in Ubuntu repositories" >&2
+  # 3. Determine best available driver >= 575
+  echo "Checking for NVIDIA driver >= 575..."
+
+  # Try drivers in order: 580, 575 (prefer newer)
+  DRIVER_VERSION=""
+  for ver in 580 575; do
+    if apt-cache show nvidia-driver-${ver}-server >/dev/null 2>&1; then
+      DRIVER_VERSION="$ver"
+      echo "Found nvidia-driver-${ver}-server"
+      break
+    fi
+  done
+
+  if [[ -z "$DRIVER_VERSION" ]]; then
+    echo "ERROR: No NVIDIA driver >= 575 available in Ubuntu repositories" >&2
     echo "Available NVIDIA server drivers:" >&2
     apt-cache search nvidia-driver | grep server >&2
     exit 1
   fi
 
-  # 4. Install NVIDIA driver 575-server
-  echo "Installing NVIDIA driver 575-server..."
+  # 4. Install NVIDIA driver
+  echo "Installing NVIDIA driver ${DRIVER_VERSION}-server..."
   DEBIAN_FRONTEND=noninteractive \
     apt-get install -y -q \
-      nvidia-driver-575-server \
-      nvidia-utils-575-server
+      nvidia-driver-${DRIVER_VERSION}-server \
+      nvidia-utils-${DRIVER_VERSION}-server
 
   # 5. Add NVIDIA container toolkit repo
   echo "Adding NVIDIA container toolkit repository..."

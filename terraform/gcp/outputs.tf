@@ -31,8 +31,13 @@ output "ssh_command" {
 }
 
 output "startup_script_log" {
-  description = "Command to view startup script execution log"
+  description = "Command to view startup script execution log (via serial console)"
   value       = "gcloud compute instances get-serial-port-output ${google_compute_instance.norsk_studio.name} --zone=${local.zone}"
+}
+
+output "startup_script_log_ssh" {
+  description = "SSH command to tail startup script log"
+  value       = "gcloud compute ssh ${google_compute_instance.norsk_studio.name} --zone=${local.zone} --command='sudo tail -f /var/log/startup-script.log'"
 }
 
 output "zone" {
