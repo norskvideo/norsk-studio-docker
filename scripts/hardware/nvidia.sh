@@ -71,10 +71,10 @@ setup_hardware() {
   # 7. Configure Docker runtime
   echo "Configuring Docker for NVIDIA runtime..."
   nvidia-ctk runtime configure --runtime=docker
-  systemctl restart docker
+  # Note: Docker restart deferred until after container pulls (bootstrap.sh Phase 5)
 
   # 8. Export hardware config
-  echo 'export DEPLOY_HARDWARE="nvidia"' >> "$REPO_DIR/deployed/${PLATFORM^}/norsk-config.sh"
+  echo 'export DEPLOY_HARDWARE="nvidia"' >> "$PLATFORM_DIR/norsk-config.sh"
 
   echo "NVIDIA setup complete - reboot required for driver to load"
 }

@@ -197,6 +197,14 @@ echo ""
 echo "=== Phase 5: Container images ==="
 setup_containers
 
+# Restart Docker if nvidia runtime was configured (deferred from Phase 4)
+if [[ "$HARDWARE" == "nvidia" ]]; then
+  echo ""
+  echo "=== Applying NVIDIA Docker runtime configuration ==="
+  systemctl restart docker
+  echo "Docker restarted with NVIDIA runtime support"
+fi
+
 echo ""
 echo "=== Phase 6: Systemd services ==="
 echo "Enabling and starting systemd services..."

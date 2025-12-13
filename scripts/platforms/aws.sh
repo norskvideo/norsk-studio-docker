@@ -4,8 +4,8 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local platform_dir="$REPO_DIR/deployed/AWS"
-  mkdir -p "$platform_dir"
+  export PLATFORM_DIR="$REPO_DIR/deployed/AWS"
+  mkdir -p "$PLATFORM_DIR"
 
   # Get IMDSv2 token (more secure than IMDSv1)
   local token
@@ -17,7 +17,7 @@ platform_setup() {
     http://169.254.169.254/latest/meta-data/public-ipv4)"
 
   # Generate norsk-config.sh
-  cat > "$platform_dir/norsk-config.sh" <<'HEREDOC'
+  cat > "$PLATFORM_DIR/norsk-config.sh" <<'HEREDOC'
 #!/usr/bin/env bash
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
   -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
@@ -34,11 +34,11 @@ fi
 HEREDOC
 
   # Substitute actual values into the config
-  sed -i "s|\${DOMAIN_NAME}|${DOMAIN_NAME}|g" "$platform_dir/norsk-config.sh"
-  sed -i "s|\${CERTBOT_EMAIL}|${CERTBOT_EMAIL}|g" "$platform_dir/norsk-config.sh"
+  sed -i "s|\${DOMAIN_NAME}|${DOMAIN_NAME}|g" "$PLATFORM_DIR/norsk-config.sh"
+  sed -i "s|\${CERTBOT_EMAIL}|${CERTBOT_EMAIL}|g" "$PLATFORM_DIR/norsk-config.sh"
 
-  chmod +x "$platform_dir/norsk-config.sh"
-  chown norsk:norsk "$platform_dir/norsk-config.sh"
+  chmod +x "$PLATFORM_DIR/norsk-config.sh"
+  chown norsk:norsk "$PLATFORM_DIR/norsk-config.sh"
 
   # Write vendor file for detection
   printf 'AWS\n' > "$REPO_DIR/deployed/vendor"

@@ -50,7 +50,7 @@ setup_hardware() {
   usermod -aG disk norsk
 
   # Configure Norsk with Quadra support
-  echo 'export DEPLOY_HARDWARE="quadra"' >> "$REPO_DIR/deployed/${PLATFORM^}/norsk-config.sh"
+  echo 'export DEPLOY_HARDWARE="quadra"' >> "$PLATFORM_DIR/norsk-config.sh"
 
   # Install systemd service for libxcoder initialization
   echo "Installing nilibxcoder systemd service..."

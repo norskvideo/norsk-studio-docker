@@ -1236,4 +1236,34 @@ docker logs norsk-media | grep -i nvidia
 - **Expected speedup:** ~3x faster on container pull phase
 - **Safe:** Docker already installed, no dependencies between pulls
 
+**Bootstrap optimization (defer docker restart):**
+- **Issue:** nvidia.sh restarts docker immediately after config, blocking until restart complete (2-5 sec)
+- **Analysis:** Container pulls don't need nvidia runtime (just downloading images)
+- **Optimization:** Defer docker restart until after pulls complete
+- **Changes:**
+  - scripts/hardware/nvidia.sh: removed `systemctl restart docker`
+  - scripts/bootstrap.sh: added restart between Phase 5 and Phase 6
+- **New flow:**
+  - Phase 4: Install driver + toolkit, configure daemon.json (no restart)
+  - Phase 5: Pull containers in parallel (no delay)
+  - Phase 5.5: Restart docker to apply nvidia runtime config
+  - Phase 6: Start services (nvidia runtime active)
+- **Expected speedup:** Removes restart from critical path, parallelizes with driver install
+- **Safe:** Runtime only needed when containers START (Phase 6), not for pulls
+
+**PLATFORM_DIR fix (case mismatch bug):**
+- **Issue:** Hardware scripts couldn't write to norsk-config.sh
+- **Root cause:** `${PLATFORM^}` only capitalizes first letter
+  - `aws` → `Aws` (should be `AWS`)
+  - Platform dirs: AWS, Google, Linode, Oracle, local (inconsistent case)
+- **Fix:** Platform scripts export PLATFORM_DIR, hardware scripts use it
+- **Changes:**
+  - All 5 platform scripts: `export PLATFORM_DIR="$REPO_DIR/deployed/{Platform}"`
+  - Removed `local platform_dir`, use exported PLATFORM_DIR throughout
+  - Added `mkdir -p "$PLATFORM_DIR"` where missing (linode, oracle, local)
+  - nvidia.sh: use `$PLATFORM_DIR/norsk-config.sh` (was `${PLATFORM^}`)
+  - quadra.sh: use `$PLATFORM_DIR/norsk-config.sh` (was `${PLATFORM^}`)
+- **Result:** Hardware config now writes correctly on all platforms
+- **Syntax validated:** All 7 modified scripts pass bash -n
+
 ### Background and Motivation

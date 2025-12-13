@@ -4,15 +4,15 @@
 # Sourced by bootstrap.sh via 20-platform.sh
 
 platform_setup() {
-  local platform_dir="$REPO_DIR/deployed/Google"
-  mkdir -p "$platform_dir"
+  export PLATFORM_DIR="$REPO_DIR/deployed/Google"
+  mkdir -p "$PLATFORM_DIR"
 
   # Get public IP from metadata service
   export DEPLOY_PUBLIC_IP="$(curl -fsH "Metadata-Flavor: Google" \
     http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip)"
 
   # Generate norsk-config.sh (runtime configuration)
-  cat > "$platform_dir/norsk-config.sh" <<'HEREDOC'
+  cat > "$PLATFORM_DIR/norsk-config.sh" <<'HEREDOC'
 #!/usr/bin/env bash
 export DEPLOY_PUBLIC_IP="$(curl -fsH "Metadata-Flavor: Google" \
   http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip)"
@@ -27,8 +27,8 @@ else
 fi
 HEREDOC
 
-  chmod +x "$platform_dir/norsk-config.sh"
-  chown norsk:norsk "$platform_dir/norsk-config.sh"
+  chmod +x "$PLATFORM_DIR/norsk-config.sh"
+  chown norsk:norsk "$PLATFORM_DIR/norsk-config.sh"
 
   # Write vendor file for detection
   printf 'Google\n' > "$REPO_DIR/deployed/vendor"
