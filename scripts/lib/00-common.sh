@@ -28,6 +28,32 @@ setup_common() {
   DEBIAN_FRONTEND=noninteractive apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils git
 
+  echo "Configuring network tuning for media streaming..."
+  cat > /etc/sysctl.d/99-norsk-network.conf <<'EOF'
+# Network tuning for Norsk media streaming
+# Optimized for high-bitrate UDP video streams
+
+# Buffer sizes (bytes)
+net.core.rmem_max=134217728
+net.core.wmem_max=134217728
+net.core.rmem_default=262144
+net.core.wmem_default=262144
+
+# Network device
+net.core.netdev_max_backlog=30000
+
+# UDP-specific
+net.ipv4.udp_rmem_min=16384
+net.ipv4.udp_wmem_min=16384
+
+# TCP (for control/signaling)
+net.ipv4.tcp_rmem=4096 87380 134217728
+net.ipv4.tcp_wmem=4096 65536 134217728
+net.ipv4.tcp_mem=786432 1048576 1572864
+net.ipv4.tcp_window_scaling=1
+EOF
+  sysctl -p /etc/sysctl.d/99-norsk-network.conf
+
   echo "Cloning repository..."
   if [[ -d "$INSTALL_DIR/.git" ]]; then
     echo "Repository already exists, pulling latest..."
