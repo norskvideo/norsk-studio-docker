@@ -806,10 +806,394 @@ resource "google_compute_instance" "norsk_studio"   # VM instance
 ### Unresolved Questions
 
 1. **Quadra support on GCP?** (likely no - rare/unsupported)
-2. **GPU driver auto-install** - does hardware/nvidia.sh work on GCP Ubuntu 24.04?
-3. **Secret Manager regional replication** - single region or multi-region?
-4. **VPC peering** - support connecting to existing peered VPCs?
-5. **Custom service account** - user-provided SA or always create new?
-6. **Metadata vs labels** - instance metadata for runtime config, labels for organization?
-7. **Startup script size limit** - inline vs GCS bucket? (64KB limit)
-8. **Ubuntu 24.04 image** - confirm family name `ubuntu-2404-noble-amd64`?
+2. ~~**GPU driver auto-install** - does hardware/nvidia.sh work on GCP Ubuntu 24.04?~~ → Planning now
+3. **Secret Manager regional replication** - single region or multi-region? → auto replication used
+4. **VPC peering** - support connecting to existing peered VPCs? → yes, via network_name/subnet_name vars
+5. **Custom service account** - user-provided SA or always create new? → both supported via service_account_email var
+6. **Metadata vs labels** - instance metadata for runtime config, labels for organization? → yes, implemented
+7. **Startup script size limit** - inline vs GCS bucket? (64KB limit) → inline template, under limit
+8. ~~**Ubuntu 24.04 image** - confirm family name `ubuntu-2404-noble-amd64`?~~ → ubuntu-2404-lts-amd64 (confirmed in main.tf)
+
+---
+
+## NVIDIA Driver Implementation for GCP
+
+**Goal:** Implement `scripts/hardware/nvidia.sh` for GPU-accelerated Norsk Studio on GCP.
+
+**User Requirements:**
+- Driver version >= 575
+- nvidia-smi available
+- Container runtime integration (Docker/Norsk)
+
+### Current State
+
+**Terraform (GCP):**
+- GPU support: n1-standard-4 + nvidia-tesla-t4 (main.tf:238-244)
+- Metadata: hardware_profile passed to startup script
+- Reboot logic: startup-script.sh:75-78 reboots if `DEPLOY_HARDWARE="nvidia"`
+
+**Stub Implementation:**
+- `scripts/hardware/nvidia.sh`: 11 lines, exits 1 with TODO
+- No driver install, no container runtime config
+
+**Reference (Quadra):**
+- `scripts/hardware/quadra.sh`: downloads binaries, compiles deps, systemd service, usermod
+
+### Research Findings
+
+**NVIDIA Driver 575+ on Ubuntu 24.04:**
+- Officially backported to Ubuntu repos ([UbuntuHandbook](https://ubuntuhandbook.org/index.php/2025/07/ubuntu-adding-nvidia-575-driver-support-for-24-04-22-04-lts/))
+- Version 575.57.08 available ([NVIDIA docs](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-575-57-08/index.html))
+- Multiple install methods: ubuntu-drivers, apt, CUDA repo
+- Includes nvidia-smi utility
+
+**Container Runtime Integration:**
+- nvidia-container-toolkit v1.17.7+ supports Ubuntu 24.04 ([Lindevs](https://lindevs.com/install-nvidia-container-toolkit-on-ubuntu))
+- Enables `docker run --gpus` flag
+- Requires Docker runtime config: `nvidia-ctk runtime configure --runtime=docker`
+
+**GCP Considerations:**
+- GCP provides automated install scripts ([GCP docs](https://docs.cloud.google.com/compute/docs/gpus/install-drivers-gpu))
+- Scripts may not fully support Ubuntu 24.04 secure boot yet
+- Recommendation: use Ubuntu native methods for 24.04
+
+### Key Challenges and Analysis
+
+**1. Driver Installation Method**
+
+**Options:**
+- **A) ubuntu-drivers autoinstall** - detects GPU, picks best driver
+- **B) apt install nvidia-driver-575-server** - explicit version control
+- **C) GCP automated script** - cloud-native but may lag Ubuntu 24.04 support
+- **D) CUDA repository** - includes CUDA toolkit (unnecessary for Norsk)
+
+**Recommendation: Option B (apt explicit install)**
+- Guarantees version >= 575
+- Server variant optimized for datacenter GPUs (T4, A10G)
+- No CUDA overhead (Norsk uses driver APIs only)
+- Ubuntu repos = tested/stable for 24.04
+
+**2. Reboot Requirement**
+
+Kernel modules (nvidia.ko, nvidia-uvm.ko) require reboot after install.
+
+**Current flow:**
+- startup-script.sh:75-78 checks `DEPLOY_HARDWARE="nvidia"` → reboot
+- Second boot: services start with GPU available
+
+**3. Container Runtime Configuration**
+
+**Steps:**
+1. Install nvidia-container-toolkit from NVIDIA repo
+2. Run `nvidia-ctk runtime configure --runtime=docker`
+3. Reload docker: `systemctl restart docker`
+4. Test: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+
+**4. Prerequisites**
+
+- `linux-headers-$(uname -r)` - kernel headers for DKMS
+- `build-essential` - compiler for module builds
+- Docker installed - already handled by 00-common.sh
+
+**5. Error Handling**
+
+- Verify GPU detected: `lspci | grep -i nvidia`
+- Check driver loaded: `nvidia-smi` (post-reboot)
+- Verify Docker integration: `docker run --gpus all`
+
+### Implementation Design
+
+**scripts/hardware/nvidia.sh structure:**
+
+```bash
+#!/usr/bin/env bash
+# NVIDIA GPU hardware profile
+# Installs driver >= 575 + container toolkit
+
+setup_hardware() {
+  # 1. Verify GPU present
+  # 2. Install prerequisites (headers, build-essential)
+  # 3. Install NVIDIA driver 575-server from Ubuntu repos
+  # 4. Install nvidia-container-toolkit from NVIDIA repo
+  # 5. Configure Docker runtime
+  # 6. Mark reboot needed (checked by startup-script.sh)
+}
+```
+
+**Driver installation:**
+```bash
+apt-get update
+apt-get install -y linux-headers-$(uname -r) build-essential
+apt-get install -y nvidia-driver-575-server nvidia-utils-575-server
+```
+
+**Container toolkit:**
+```bash
+# Add NVIDIA repo
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+apt-get update
+apt-get install -y nvidia-container-toolkit
+
+# Configure Docker
+nvidia-ctk runtime configure --runtime=docker
+systemctl restart docker
+```
+
+**Reboot coordination:**
+- nvidia.sh doesn't reboot itself (called during bootstrap)
+- startup-script.sh detects `DEPLOY_HARDWARE="nvidia"` in norsk-config.sh
+- Reboots once after full bootstrap completes
+- Post-reboot: norsk.service starts with GPU access
+
+### Opinions & Recommendations
+
+**Driver Version Strategy:**
+- **Target: 575-server (not 575)** - server variant for stability
+- Justification: T4/A10G are datacenter GPUs, need server drivers
+- Alternative: 570-server (older but stable) if 575 issues found
+
+**Testing Strategy:**
+1. **Pre-reboot verification:**
+   - Driver installed: `dpkg -l | grep nvidia-driver-575`
+   - Toolkit installed: `which nvidia-ctk`
+   - Docker config: `cat /etc/docker/daemon.json | grep nvidia`
+
+2. **Post-reboot verification:**
+   - Driver loaded: `nvidia-smi` shows GPU + driver version
+   - Docker integration: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+
+**Risks & Mitigations:**
+- **Risk:** 575 not yet in Ubuntu repos for 24.04
+  - **Mitigation:** Fallback to 570-server, or use graphics-drivers PPA
+- **Risk:** Secure boot conflicts with unsigned modules
+  - **Mitigation:** GCP instances typically don't use secure boot, or use signed ubuntu-drivers
+- **Risk:** Container toolkit repo changes
+  - **Mitigation:** Pin specific version if needed
+
+### Implementation Plan
+
+**Phase 1: nvidia.sh Core Implementation**
+- [ ] Replace stub with driver install logic
+  - Verify GPU present via lspci
+  - Install linux-headers + build-essential
+  - Install nvidia-driver-575-server + nvidia-utils-575-server
+  - Exit cleanly if no GPU found (hardware=auto fallback)
+  - Success: driver packages installed, no errors
+
+**Phase 2: Container Runtime Integration**
+- [ ] Add nvidia-container-toolkit installation
+  - Add NVIDIA repo w/ GPG key
+  - Install nvidia-container-toolkit package
+  - Configure Docker runtime via nvidia-ctk
+  - Restart docker daemon
+  - Success: `nvidia-ctk --version` works, docker config has nvidia runtime
+
+**Phase 3: Verification & Testing**
+- [ ] Add pre-reboot checks
+  - Verify driver packages installed
+  - Verify toolkit installed
+  - Verify docker daemon.json configured
+  - Success: all checks pass before reboot
+
+**Phase 4: Post-Reboot Validation**
+- [ ] Test on GCP with T4
+  - Deploy via terraform w/ use_gpu=true
+  - SSH post-reboot, check nvidia-smi output
+  - Test docker GPU access
+  - Verify Norsk can access GPU
+  - Success: nvidia-smi shows driver 575+, docker test passes
+
+**Phase 5: Documentation**
+- [ ] Update README.md
+  - Document GPU setup
+  - Add nvidia-smi verification steps
+  - Add troubleshooting section
+  - Success: clear GPU deployment instructions
+
+### Implementation Decisions
+
+1. **Driver version:** Fail if 575-server unavailable (no fallback)
+2. **Install method:** Explicit `apt install nvidia-driver-575-server`
+3. **Nouveau blacklist:** Skip (package handles automatically)
+4. **CUDA toolkit:** No (Norsk uses Video Codec SDK only)
+5. **Test image:** nvidia/cuda:12.6.3-base-ubuntu24.04
+6. **Docker config:** nvidia-ctk writes daemon.json, Compose reads it via `driver: nvidia`
+7. **Norsk config:** yaml/hardware-devices/nvidia.yaml already correct (no changes)
+
+### High-Level Task Breakdown
+
+**Phase 1: nvidia.sh Implementation** ✓
+- [x] Verify GPU present via lspci
+- [x] Install prerequisites (linux-headers, build-essential)
+- [x] Check nvidia-driver-575-server availability
+- [x] Install nvidia-driver-575-server + nvidia-utils-575-server
+- [x] Add NVIDIA container toolkit repo
+- [x] Install nvidia-container-toolkit
+- [x] Configure Docker runtime via nvidia-ctk
+- [x] Restart Docker daemon
+- [x] Export DEPLOY_HARDWARE="nvidia" to norsk-config.sh
+- [x] Success: packages installed, docker configured, no errors
+
+**Phase 2: Testing on GCP**
+- [ ] Deploy test instance via terraform (use_gpu=true, n1-standard-4 + T4)
+- [ ] SSH post-reboot, verify nvidia-smi shows driver 575+
+- [ ] Test docker GPU access: `docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi`
+- [ ] Verify Norsk containers start with GPU access
+- [ ] Check norsk logs for GPU device detection
+- [ ] Success: full GPU stack operational
+
+**Phase 3: Documentation**
+- [ ] Update terraform/gcp/README.md with GPU validation steps
+- [ ] Add troubleshooting section for GPU issues
+- [ ] Document nvidia-smi verification
+- [ ] Success: clear deployment & validation instructions
+
+### Detailed Implementation Plan
+
+**scripts/hardware/nvidia.sh structure:**
+
+```bash
+#!/usr/bin/env bash
+# NVIDIA GPU hardware profile
+# Installs driver 575-server + container toolkit for Ubuntu 24.04
+
+setup_hardware() {
+  echo "Setting up NVIDIA GPU support..."
+
+  # 1. Verify GPU present
+  if ! lspci | grep -qi nvidia; then
+    echo "No NVIDIA GPU detected via lspci"
+    exit 1
+  fi
+
+  # 2. Install prerequisites
+  apt-get update
+  apt-get install -y linux-headers-$(uname -r) build-essential
+
+  # 3. Check driver availability
+  if ! apt-cache policy nvidia-driver-575-server | grep -q 'Candidate:'; then
+    echo "ERROR: nvidia-driver-575-server not available in repos"
+    echo "Available drivers:"
+    apt-cache search nvidia-driver | grep server
+    exit 1
+  fi
+
+  # 4. Install NVIDIA driver 575-server
+  echo "Installing NVIDIA driver 575-server..."
+  apt-get install -y nvidia-driver-575-server nvidia-utils-575-server
+
+  # 5. Add NVIDIA container toolkit repo
+  echo "Adding NVIDIA container toolkit repository..."
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+    gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+  curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+  # 6. Install nvidia-container-toolkit
+  apt-get update
+  apt-get install -y nvidia-container-toolkit
+
+  # 7. Configure Docker runtime
+  echo "Configuring Docker for NVIDIA runtime..."
+  nvidia-ctk runtime configure --runtime=docker
+  systemctl restart docker
+
+  # 8. Export hardware config
+  echo 'export DEPLOY_HARDWARE="nvidia"' >> "$REPO_DIR/deployed/${PLATFORM^}/norsk-config.sh"
+
+  echo "NVIDIA setup complete - reboot required for driver to load"
+}
+```
+
+**Verification checks (manual after deployment):**
+```bash
+# Post-reboot verification
+nvidia-smi  # Should show driver 575+, GPU model, memory
+
+# Docker GPU test
+docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi
+
+# Norsk container check
+docker ps | grep norsk-media
+docker logs norsk-media | grep -i nvidia
+```
+
+### Testing Strategy
+
+**Pre-deployment validation:**
+- Syntax check: `bash -n scripts/hardware/nvidia.sh`
+- Mock test: run with `lspci` stubbed (test/install/mock-hardware/nvidia.sh)
+
+**GCP deployment test:**
+1. Create terraform.tfvars:
+   ```hcl
+   use_gpu = true
+   machine_type = "n1-standard-4"
+   gpu_type = "nvidia-tesla-t4"
+   hardware_profile = "auto"  # or "nvidia"
+   ```
+2. `terraform apply`
+3. Monitor: `gcloud compute instances get-serial-port-output` (watch for reboot)
+4. SSH post-reboot, run verification commands
+5. Test Norsk workflow with GPU encode/decode
+
+**Success criteria:**
+- ✓ nvidia-smi shows driver >= 575
+- ✓ Docker test container can access GPU
+- ✓ norsk-media container starts without errors
+- ✓ GPU shows up in Norsk Studio hardware panel
+- ✓ Can create workflow using NVIDIA encode node
+
+### Risk Mitigation
+
+**Risk 1:** 575-server not in Ubuntu 24.04 repos yet
+- **Check:** Run `apt-cache policy nvidia-driver-575-server` on fresh 24.04 instance
+- **Mitigation:** If unavailable, add graphics-drivers PPA or use 570-server (update script)
+
+**Risk 2:** Container toolkit repo changes URL/format
+- **Mitigation:** Pin to stable branch (already using /stable/deb/)
+
+**Risk 3:** Reboot loop if driver fails to load
+- **Mitigation:** Check dmesg/journalctl for nvidia module errors, test on single instance first
+
+**Risk 4:** Docker restart breaks running containers
+- **Mitigation:** Occurs during bootstrap (no containers running yet), safe
+
+### Sources
+
+- [UbuntuHandbook - NVIDIA 575 Driver Support](https://ubuntuhandbook.org/index.php/2025/07/ubuntu-adding-nvidia-575-driver-support-for-24-04-22-04-lts/)
+- [NVIDIA Data Center Driver 575.57.08 Release Notes](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-575-57-08/index.html)
+- [Lindevs - NVIDIA Container Toolkit Ubuntu 24.04](https://lindevs.com/install-nvidia-container-toolkit-on-ubuntu)
+- [GCP - Install GPU Drivers](https://docs.cloud.google.com/compute/docs/gpus/install-drivers-gpu)
+
+### Executor's Feedback
+
+**Phase 1 Complete (scripts/hardware/nvidia.sh implementation):**
+- Implemented 69-line script replacing 11-line stub
+- GPU detection via lspci (exits if no GPU found)
+- Prerequisites: linux-headers, build-essential, pciutils
+- Driver check: fails fast if nvidia-driver-575-server unavailable
+- Driver install: nvidia-driver-575-server + nvidia-utils-575-server
+- Container toolkit: NVIDIA repo + nvidia-container-toolkit package
+- Docker config: nvidia-ctk runtime configure + systemd restart
+- Hardware flag: exports DEPLOY_HARDWARE="nvidia" to norsk-config.sh
+- Uses DEBIAN_FRONTEND=noninteractive (matches quadra.sh pattern)
+- Syntax validated: bash -n passes
+
+**Ready for Phase 2 (GCP testing):**
+- Need terraform.tfvars with use_gpu=true, n1-standard-4, nvidia-tesla-t4
+- Need to verify 575-server availability on fresh Ubuntu 24.04 GCP instance
+- Need to test full bootstrap flow: driver install → reboot → nvidia-smi verification
+
+**Implementation notes:**
+- Added pciutils to prerequisites (provides lspci if not present)
+- Error messages to stderr with clear diagnostics
+- Reboot message at end (handled by startup-script.sh:75-78)
+
+### Background and Motivation
