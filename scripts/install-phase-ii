@@ -31,7 +31,19 @@ main() {
     source "$targetDirname/versions"
 
     # Do a dry run of the compose command to make sure that the installed version is compatible with our YAML
-    "$targetDirname/up.sh" --merge /dev/null  > /dev/null 2>&1 || oops "your version of Docker Compose is not sufficiently recent - please update to the latest Docker Compose and try again"
+    tmpOutput=$(mktemp)
+    tmpMerge=$(mktemp)
+    "$targetDirname/up.sh" --merge "$tmpMerge" > "$tmpOutput" 2>&1 || true
+    if [[ -f "$tmpOutput" ]]; then
+        rm "$tmpOutput"
+        rm "$tmpMerge"
+    else
+        echo "A trail run failed, with output"
+        cat "$tmpOutput"
+        rm "$tmpOutput"
+        rm "$tmpMerge"
+        oops "Please check permissions and Docker Compose version"
+    fi
 
     local containers=("$NORSK_MEDIA_IMAGE" "$NORSK_STUDIO_IMAGE")
 

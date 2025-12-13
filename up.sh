@@ -20,7 +20,7 @@ declare LOCAL_TURN_DEFAULT
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
-declare LOG_ROOT=${LOG_ROOT:-$(realpath "./logs")}
+declare LOG_ROOT=${LOG_ROOT:-$PWD/logs}
 
 # Detect platform and set defaults
 if [[ "$OSTYPE" == "linux"* ]]; then
