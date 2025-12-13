@@ -3,10 +3,6 @@ set -euo pipefail
 source "$(dirname "$0")/norsk-config.sh"
 cd "$(dirname "$0")/../support" || exit 1
 
-# Ensure logs directory exists and is owned by norsk user
-mkdir -p "${DEPLOY_LOGS}"
-chown -R norsk:norsk "${DEPLOY_LOGS}"
-
 HTPASSWD=oauth2/secrets/.htpasswd
 touch $HTPASSWD
 # If the password file was not already customized and we have a method to generate it

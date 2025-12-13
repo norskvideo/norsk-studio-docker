@@ -20,6 +20,10 @@ setup_common() {
     usermod -aG root,docker norsk
   fi
 
+  echo "Creating logs directory..."
+  mkdir -p /var/log/norsk
+  chown -R norsk:norsk /var/log/norsk
+
   echo "Installing system dependencies..."
   DEBIAN_FRONTEND=noninteractive apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -q certbot dnsutils git
