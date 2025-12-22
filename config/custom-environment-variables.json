@@ -1,0 +1,13 @@
+{
+  "server": {
+    "working_directory": "STUDIO_WORKING_DIRECTORY",
+    "document": "STUDIO_DOCUMENT",
+    "document_overrides": "STUDIO_DOCUMENT_OVERRIDES",
+    "library_root": "STUDIO_LIBRARY_ROOT",
+    "studio_url_prefix": "STUDIO_URL_PREFIX",
+    "studio_docs_url": "STUDIO_DOCS_URL"
+  },
+  "norsk": {
+    "host": "STUDIO_NORSK_HOST"
+  }
+}
