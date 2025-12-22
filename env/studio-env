@@ -19,6 +19,8 @@ STUDIO_WORKING_DIRECTORY=${STUDIO_WORKING_DIRECTORY:-/data/}
 # You can get it from e.g. https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin
 # Or run scripts/get-whisper-tiny-model.sh
 
+# The configuration in 'config' to load (by default, 'default')
+NODE_ENV=${NODE_ENV:-}
 
 STUDIO_DOCUMENT=${STUDIO_DOCUMENT:-}
 # Example: OnscreenGraphic.yaml

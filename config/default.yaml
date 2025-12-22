@@ -1,0 +1,32 @@
+#################################################################
+# Setting for how Norsk Studio itself operates
+#################################################################
+server:
+  port: 8000
+  working_directory: "/data/"
+  logs: "logs"
+  library:
+    - "@norskvideo/norsk-studio-built-ins"
+    - "@norskvideo/norsk-studio-source-switcher"
+    - "@norskvideo/norsk-studio-beta"
+    - "norsk-studio-starter-kit" # this package itself
+  #  If you want to use AWS things, you need to add the following library
+  #  - '@norskvideo/norsk-studio-aws'
+  developer_mode: true
+  # You can configure multiple storage options here, but only s3 exists at present
+  # By default, documents are saved to the local filesystem on the server running studio
+  # If you want to save to S3, you need to configure the bucket and prefix below
+  # The server (or current environment) needs to have the correct AWS credentials to read, write and list object in the bucket
+  # storage_settings:
+  #   - id: "s3"
+  #     name: "s3"
+  #     bucket: "cf-norsk-manager-config"
+  #     prefix: "studio-packages"
+
+#################################################################
+# Setting for how Norsk Studio talks to Norsk Media Server
+#################################################################
+norsk:
+  host: "127.0.0.1"
+  api_port: 6790
+  support_port: 6791
