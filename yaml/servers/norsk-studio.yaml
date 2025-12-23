@@ -11,7 +11,7 @@ services:
         condition: service_healthy
     volumes:
       - ${DATA_ROOT:-../../data}:/data
-      - ${../../config:/config
+      - ../../config:/usr/src/app/config
       - ${LOG_ROOT:-../../logs}/norsk-studio:/usr/src/app/logs
 
     command: npx studio-editor
