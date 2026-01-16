@@ -113,32 +113,37 @@ validate_studio_file() {
     local file_path="$1"
     local file_type="$2"  # "workflow" or "overrides"
     local file_check="$file_path"
+    local data_root="data"
+
+    if [[ ! -z "$DATA_ROOT" ]]; then
+        data_root="$DATA_ROOT";
+    fi
 
     # If absolute path, check it resolves to our studio-save-files directory
     if [[ "$file_path" == /* ]]; then
-        local abs_studio_save_files="$(cd data/studio-save-files 2>/dev/null && pwd)"
+        local abs_studio_save_files="$(cd $data_root/studio-save-files 2>/dev/null && pwd)"
         if [[ "$file_path" == "$abs_studio_save_files"/* ]]; then
             # Absolute path within our studio-save-files, this is OK
             file_check="${file_path#$abs_studio_save_files/}"
         else
-            echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
+            echo "Error: $file_type must be in $data_root/studio-save-files/ directory" >&2
             echo "  Got absolute path: $file_path" >&2
             exit 1
         fi
     # Strip data/studio-save-files/ prefix if present
-    elif [[ "$file_path" == data/studio-save-files/* ]]; then
-        file_check="${file_path#data/studio-save-files/}"
+    elif [[ "$file_path" == $data_root/studio-save-files/* ]]; then
+        file_check="${file_path#$data_root/studio-save-files/}"
     elif [[ "$file_path" == */* ]]; then
         # Has path separators but not recognized prefix
-        echo "Error: $file_type must be in data/studio-save-files/ directory" >&2
-        echo "  Specify just the filename or use data/studio-save-files/ prefix" >&2
+        echo "Error: $file_type must be in $data_root/studio-save-files/ directory" >&2
+        echo "  Specify just the filename or use $data_root/studio-save-files/ prefix" >&2
         echo "  Got: $file_path" >&2
         exit 1
     fi
 
     # Check file exists
-    if [[ ! -f "data/studio-save-files/$file_check" ]]; then
-        echo "Error: $file_type file not found: data/studio-save-files/$file_check" >&2
+    if [[ ! -f "$data_root/studio-save-files/$file_check" ]]; then
+        echo "Error: $file_type file not found: $data_root/studio-save-files/$file_check" >&2
         exit 1
     fi
 
