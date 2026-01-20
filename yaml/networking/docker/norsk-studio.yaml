@@ -11,3 +11,4 @@ services:
     environment:
       # In Docker networking the name of the norsk server is norsk - not 127.0.0.1
       STUDIO_NORSK_HOST: norsk-media
+      STUDIO_NORSK_INTERNAL_PREFIX: http://norsk-media:8080
