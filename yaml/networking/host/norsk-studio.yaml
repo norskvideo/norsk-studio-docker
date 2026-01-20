@@ -1,3 +1,5 @@
 services:
   norsk-studio:
     network_mode: host
+    environment:
+      STUDIO_NORSK_INTERNAL_PREFIX: http://localhost:8080

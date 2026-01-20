@@ -42,6 +42,7 @@ STUDIO_URL_PREFIX=${STUDIO_URL_PREFIX:-}
 # A URL to docs (defaults )
 STUDIO_DOCS_URL=${STUDIO_DOCS_URL:-}
 
+
 # Logging
 LOG_LEVEL=info # error warning info debug silly
 NODE_DEBUG=norsk # Output extra trace (e.g. gRPC messages)

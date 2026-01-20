@@ -3,6 +3,10 @@ services:
   # Norsk Media Server
   #################################################################
   norsk-media:
+    ulimits:
+      core:
+        soft: -1
+        hard: -1
     container_name: norsk-media
     image: $NORSK_MEDIA_IMAGE
     command: --license-file /run/secrets/license.json
@@ -13,7 +17,12 @@ services:
 
     # privileged: true
     restart: always
+    security_opt:
+      - seccomp=unconfined
+    cap_add:
+      - SYS_PTRACE
     volumes:
+      - /cores:/cores
       - ${DATA_ROOT:-../../data}:/data
       - ${LOG_ROOT:-../../logs}/norsk-media:/var/log/norsk
       - ../../secrets:/data/secrets:ro
