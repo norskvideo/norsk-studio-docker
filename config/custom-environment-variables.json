@@ -5,9 +5,13 @@
     "document_overrides": "STUDIO_DOCUMENT_OVERRIDES",
     "library_root": "STUDIO_LIBRARY_ROOT",
     "studio_url_prefix": "STUDIO_URL_PREFIX",
-    "studio_docs_url": "STUDIO_DOCS_URL"
+    "studio_docs_url": "STUDIO_DOCS_URL",
+    "fill": {
+      "enabled": "STUDIO_FILL_ENABLED"
+    }
   },
   "norsk": {
-    "host": "STUDIO_NORSK_HOST"
+    "host": "STUDIO_NORSK_HOST",
+    "internal_public_prefix": "STUDIO_NORSK_INTERNAL_PREFIX"
   }
 }
