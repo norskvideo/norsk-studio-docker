@@ -20,7 +20,7 @@ declare LOCAL_TURN_DEFAULT
 
 declare HOST_IP=${HOST_IP:-127.0.0.1}
 
-declare LOG_ROOT=${LOG_ROOT:-$PWD/logs}
+export LOG_ROOT=${LOG_ROOT:-$PWD/logs}
 
 # Detect platform and set defaults
 if [[ "$OSTYPE" == "linux"* ]]; then
@@ -490,6 +490,14 @@ main() {
     if [[ ! -w "$LOG_ROOT/norsk-media" || ! -w "$LOG_ROOT/norsk-studio" ]]; then
         echo "Error: Logs directory is not writable: $2"
         exit 1
+    fi
+
+    # Debug: show directory info
+    if [[ -n "${CI:-}" ]]; then
+        echo "Debug: PWD=$PWD"
+        echo "Debug: LOG_ROOT=$LOG_ROOT"
+        echo "Debug: id=$(id)"
+        ls -la "$LOG_ROOT"
     fi
 
     # Validate workflow file - must be in data/studio-save-files/
