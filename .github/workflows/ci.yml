@@ -69,7 +69,7 @@ jobs:
         id: tests
         run: |
           cd test
-          npm run test:integration:json || true
+          npm run test:integration:json 2>&1 | tee integration-output.txt || true
           # Ensure file exists
           if [[ ! -s integration-results.json ]]; then
             echo '{"stats": {"passes": 0, "failures": 1}, "failures": [{"fullTitle": "Tests failed to run"}]}' > integration-results.json
@@ -87,13 +87,18 @@ jobs:
           echo ""
           echo "=== norsk-studio logs ==="
           docker logs norsk-studio 2>&1 | tail -100 || echo "No norsk-studio container"
+          echo ""
+          echo "=== Test output ==="
+          cat test/integration-output.txt 2>/dev/null || echo "No test output file"
 
       - name: Upload integration test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integration-results
-          path: test/integration-results.json
+          path: |
+            test/integration-results.json
+            test/integration-output.txt
 
   notify:
     runs-on: ubuntu-latest

@@ -8,5 +8,6 @@ test/node_modules
 unit-output.txt
 unit-results.json
 integration-results.json
+integration-output.txt
 gh-summary.md
 discord.json
