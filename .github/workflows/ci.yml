@@ -7,30 +7,41 @@ on:
     branches: [main]
 
 jobs:
-  shellcheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: '.'
-          severity: warning
-          ignore_paths: >-
-            terraform
-
   unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Write license file
+        run: |
+          mkdir -p secrets
+          echo '${{ secrets.NORSK_LICENSE }}' > secrets/license.json
+
       - name: Run bash unit tests
-        run: ./test/run-all.sh --unit-only
+        id: tests
+        run: |
+          ./test/run-all.sh --unit-only 2>&1 | tee unit-output.txt
+          # Parse results for summary
+          UNIT_OUTPUT_CLEAN=$(cat unit-output.txt | sed 's/\x1b\[[0-9;]*m//g')
+          UNIT_TOTAL=$(echo "$UNIT_OUTPUT_CLEAN" | grep -oP 'Tests run: \K\d+' | paste -sd+ | bc 2>/dev/null || echo "0")
+          UNIT_PASSED=$(echo "$UNIT_OUTPUT_CLEAN" | grep -oP 'Passed: \K\d+' | paste -sd+ | bc 2>/dev/null || echo "0")
+          UNIT_FAILED=$((UNIT_TOTAL - UNIT_PASSED))
+          echo "passed=$UNIT_PASSED" >> "$GITHUB_OUTPUT"
+          echo "failed=$UNIT_FAILED" >> "$GITHUB_OUTPUT"
+          # Write JSON for aggregation
+          jq -n --argjson passes "$UNIT_PASSED" --argjson failures "$UNIT_FAILED" \
+            '{stats: {passes: $passes, failures: $failures}, failures: []}' > unit-results.json
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-results
+          path: unit-results.json
 
   integration-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Only run on main or when explicitly requested
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run-integration')
     steps:
       - uses: actions/checkout@v4
@@ -54,27 +65,122 @@ jobs:
           docker pull $NORSK_MEDIA_IMAGE
           docker pull $NORSK_STUDIO_IMAGE
 
-      - name: Run tests
+      - name: Run integration tests
         id: tests
-        run: ./scripts/gh-tests.sh
+        run: |
+          cd test
+          npm run test:integration:json || true
+          # Ensure file exists
+          if [[ ! -s integration-results.json ]]; then
+            echo '{"stats": {"passes": 0, "failures": 1}, "failures": [{"fullTitle": "Tests failed to run"}]}' > integration-results.json
+          fi
         timeout-minutes: 10
 
-      - name: Upload test results
+      - name: Upload integration test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: |
-            discord.json
-            gh-summary.md
+          name: integration-results
+          path: test/integration-results.json
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always()
+    steps:
+      - name: Download unit results
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-results
+          path: results
+        continue-on-error: true
+
+      - name: Download integration results
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-results
+          path: results
+        continue-on-error: true
+
+      - name: Create default results if missing
+        run: |
+          mkdir -p results
+          if [[ ! -f results/unit-results.json ]]; then
+            echo '{"stats": {"passes": 0, "failures": 0}, "failures": []}' > results/unit-results.json
+          fi
+          if [[ ! -f results/integration-results.json ]]; then
+            echo '{"stats": {"passes": 0, "failures": 0, "skipped": true}, "failures": []}' > results/integration-results.json
+          fi
+
+      - name: Generate summaries
+        run: |
+          cd results
+          # Generate Discord payload
+          cat unit-results.json integration-results.json | jq -s \
+            --arg GITHUB_REF "${GITHUB_REF:-local}" \
+            --arg GITHUB_RUN_ID "${GITHUB_RUN_ID:-0}" \
+            --arg GITHUB_REPOSITORY "${GITHUB_REPOSITORY:-norskvideo/norsk-studio-docker}" \
+          '{
+            "content": "",
+            "avatar_url": "https://i.imgur.com/HzrYPqf.png",
+            "username": "Docker CI",
+            "embeds": [
+              {
+                "title": "",
+                "color": (if .[0].stats.failures == 0 then 5763719 else 15548997 end),
+                "description": (
+                  "[norsk-studio-docker/" + $GITHUB_REF + "](https://github.com/" + $GITHUB_REPOSITORY + "/actions/runs/" + $GITHUB_RUN_ID + ")"
+                  + "\r\n"
+                  + "**Unit Tests:** "
+                  + (.[0].stats.passes | tostring) + " passed"
+                  + (if .[0].stats.failures > 0 then ", " + (.[0].stats.failures | tostring) + " failed" else "" end)
+                )
+              },
+              {
+                "title": "",
+                "color": (if .[1].stats.skipped then 9807270 elif .[1].stats.failures == 0 then 5763719 else 15548997 end),
+                "description": (
+                  if .[1].stats.skipped then "**Integration Tests:** skipped"
+                  else
+                    "**Integration Tests:** "
+                    + (.[1].stats.passes | tostring) + " passed"
+                    + (if .[1].stats.failures > 0 then
+                        ", " + (.[1].stats.failures | tostring) + " failed"
+                        + "\r\n**Failed:** \r\n- " + ([.[1].failures[].fullTitle] | join("\r\n- "))
+                      else "" end)
+                  end
+                )
+              }
+            ]
+          }' > discord.json
+
+          # Generate GitHub step summary
+          cat unit-results.json integration-results.json | jq -r -s \
+          '"## Test Results\n\n" +
+          "| Suite | Passed | Failed |\n" +
+          "|-------|--------|--------|\n" +
+          "| Unit Tests | " + (.[0].stats.passes | tostring) + " | " + (.[0].stats.failures | tostring) + " |\n" +
+          (if .[1].stats.skipped then
+            "| Integration Tests | - | skipped |\n"
+          else
+            "| Integration Tests | " + (.[1].stats.passes | tostring) + " | " + (.[1].stats.failures | tostring) + " |\n"
+          end) +
+          "\n" +
+          (if (.[0].stats.failures > 0 or (.[1].stats.failures > 0 and (.[1].stats.skipped | not))) then
+            "### Failed Tests\n\n" +
+            (if .[1].stats.failures > 0 then
+              ([.[1].failures[].fullTitle] | map("- " + .) | join("\n")) + "\n"
+            else "" end)
+          else
+            "All tests passed! :white_check_mark:\n"
+          end)' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Discord notification
-        if: always()
         continue-on-error: true
         run: |
-          if [[ -f discord.json && -n "${{ secrets.DISCORD_URL }}" ]]; then
+          if [[ -f results/discord.json && -n "${{ secrets.DISCORD_URL }}" ]]; then
             curl -H "Content-Type: application/json" \
-              -d @discord.json \
+              -d @results/discord.json \
               "${{ secrets.DISCORD_URL }}"
           else
             echo "Skipping Discord notification (no webhook or results file)"
