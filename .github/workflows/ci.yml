@@ -124,6 +124,21 @@ jobs:
             echo '{"stats": {"passes": 0, "failures": 0, "skipped": true}, "failures": []}' > results/integration-results.json
           fi
 
+      - name: Gather commits
+        id: commits
+        env:
+          PAYLOAD: ${{ toJson(github.event.commits) }}
+        run: |
+          {
+            echo "commits<<EOF"
+            if [ "$PAYLOAD" = "null" ] || [ -z "$PAYLOAD" ]; then
+              echo ""
+            else
+              echo "$PAYLOAD" | jq -r '([.[] | ("- " + .id[0:6] + " " + .message + " - " + .author.username)] | join("\n"))'
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Get pony avatar
         id: pony
         run: |
@@ -142,6 +157,8 @@ jobs:
           echo "url=$PONY_URL" >> "$GITHUB_OUTPUT"
 
       - name: Generate summaries
+        env:
+          COMMITS: ${{ steps.commits.outputs.commits }}
         run: |
           cd results
           # Generate Discord payload
@@ -150,11 +167,12 @@ jobs:
             --arg GITHUB_RUN_ID "${GITHUB_RUN_ID:-0}" \
             --arg GITHUB_REPOSITORY "${GITHUB_REPOSITORY:-norskvideo/norsk-studio-docker}" \
             --arg PONY_URL "${{ steps.pony.outputs.url }}" \
+            --arg COMMITS "$COMMITS" \
           '{
             "content": "",
             "avatar_url": $PONY_URL,
             "username": "Jankings",
-            "embeds": [
+            "embeds": ([
               {
                 "title": "",
                 "color": (if .[0].stats.failures == 0 then 5763719 else 15548997 end),
@@ -181,11 +199,16 @@ jobs:
                   end
                 )
               }
-            ]
+            ] + (if $COMMITS != "" then [{
+              "title": "",
+              "color": 5763719,
+              "description": ("**Changes:**\r\n" + $COMMITS)
+            }] else [] end))
           }' > discord.json
 
           # Generate GitHub step summary
           cat unit-results.json integration-results.json | jq -r -s \
+            --arg COMMITS "$COMMITS" \
           '"## Test Results\n\n" +
           "| Suite | Passed | Failed |\n" +
           "|-------|--------|--------|\n" +
@@ -203,7 +226,10 @@ jobs:
             else "" end)
           else
             "All tests passed! :white_check_mark:\n"
-          end)' >> "$GITHUB_STEP_SUMMARY"
+          end) +
+          (if $COMMITS != "" then
+            "\n### Changes\n\n" + $COMMITS + "\n"
+          else "" end)' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Discord notification
         continue-on-error: true
