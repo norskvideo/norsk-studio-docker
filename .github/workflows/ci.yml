@@ -124,6 +124,23 @@ jobs:
             echo '{"stats": {"passes": 0, "failures": 0, "skipped": true}, "failures": []}' > results/integration-results.json
           fi
 
+      - name: Get pony avatar
+        id: pony
+        run: |
+          # Check if any tests failed
+          UNIT_FAILURES=$(jq -r '.stats.failures // 0' results/unit-results.json)
+          INT_FAILURES=$(jq -r '.stats.failures // 0' results/integration-results.json)
+          if [[ "$UNIT_FAILURES" -gt 0 || "$INT_FAILURES" -gt 0 ]]; then
+            QUERY="sad"
+          else
+            QUERY="happy"
+          fi
+          PONY_URL=$(curl -s "https://theponyapi.com/api/v1/pony/random?q=$QUERY" | jq -r '.pony.representations.small // empty')
+          if [[ -z "$PONY_URL" ]]; then
+            PONY_URL="https://theponyapi.com/images/fallback.png"
+          fi
+          echo "url=$PONY_URL" >> "$GITHUB_OUTPUT"
+
       - name: Generate summaries
         run: |
           cd results
@@ -132,10 +149,11 @@ jobs:
             --arg GITHUB_REF "${GITHUB_REF:-local}" \
             --arg GITHUB_RUN_ID "${GITHUB_RUN_ID:-0}" \
             --arg GITHUB_REPOSITORY "${GITHUB_REPOSITORY:-norskvideo/norsk-studio-docker}" \
+            --arg PONY_URL "${{ steps.pony.outputs.url }}" \
           '{
             "content": "",
-            "avatar_url": "https://i.imgur.com/HzrYPqf.png",
-            "username": "Docker CI",
+            "avatar_url": $PONY_URL,
+            "username": "Jankings",
             "embeds": [
               {
                 "title": "",
