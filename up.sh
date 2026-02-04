@@ -492,13 +492,6 @@ main() {
         exit 1
     fi
 
-    # Debug: show directory info
-    if [[ -n "${CI:-}" ]]; then
-        echo "Debug: PWD=$PWD"
-        echo "Debug: LOG_ROOT=$LOG_ROOT"
-        echo "Debug: id=$(id)"
-        ls -la "$LOG_ROOT"
-    fi
 
     # Validate workflow file - must be in data/studio-save-files/
     local validated_workflow=""
