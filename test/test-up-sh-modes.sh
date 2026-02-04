@@ -19,13 +19,11 @@ output=$(./up.sh --public-url "https://example.com/norsk" \
                  --studio-url "https://example.com/studio" \
                  --merge /tmp/test-advanced.yaml)
 # Should not error
+((TESTS_RUN++))
 if [[ "$output" == *"Error:"* ]]; then
     fail "Advanced mode with both URLs" "no error" "got error"
-    ((TESTS_RUN++))
 else
     pass "Advanced mode with both URLs"
-    ((TESTS_RUN++))
-    ((TESTS_PASSED++))
 fi
 
 # Test 3: Deprecation warning for HOST_IP env var

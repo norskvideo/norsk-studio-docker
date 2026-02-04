@@ -4,3 +4,9 @@ logs
 terraform/aws/.terraform
 terraform/gcp/.terraform
 deployed/*/norsk-config.sh
+test/node_modules
+unit-output.txt
+unit-results.json
+integration-results.json
+gh-summary.md
+discord.json

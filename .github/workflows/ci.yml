@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          severity: warning
+          ignore_paths: >-
+            terraform
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run bash unit tests
+        run: ./test/run-all.sh --unit-only
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run on main or when explicitly requested
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run-integration')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install test dependencies
+        run: cd test && npm install
+
+      - name: Write license file
+        run: |
+          mkdir -p secrets
+          echo '${{ secrets.NORSK_LICENSE }}' > secrets/license.json
+
+      - name: Pull containers
+        run: |
+          source versions
+          docker pull $NORSK_MEDIA_IMAGE
+          docker pull $NORSK_STUDIO_IMAGE
+
+      - name: Run tests
+        id: tests
+        run: ./scripts/gh-tests.sh
+        timeout-minutes: 10
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            discord.json
+            gh-summary.md
+
+      - name: Discord notification
+        if: always()
+        continue-on-error: true
+        run: |
+          if [[ -f discord.json && -n "${{ secrets.DISCORD_URL }}" ]]; then
+            curl -H "Content-Type: application/json" \
+              -d @discord.json \
+              "${{ secrets.DISCORD_URL }}"
+          else
+            echo "Skipping Discord notification (no webhook or results file)"
+          fi

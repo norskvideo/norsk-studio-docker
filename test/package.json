@@ -1,0 +1,15 @@
+{
+  "name": "norsk-studio-docker-tests",
+  "private": true,
+  "scripts": {
+    "test": "cd .. && ./test/run-all.sh",
+    "test:unit": "cd .. && ./test/run-all.sh --unit-only",
+    "test:integration": "mocha 'integration/**/*.test.js' --timeout 180000",
+    "test:integration:json": "mocha 'integration/**/*.test.js' --timeout 180000 --reporter mocha-json-output-reporter --reporter-options output=integration-results.json"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "mocha-json-output-reporter": "^2.1.0"
+  }
+}

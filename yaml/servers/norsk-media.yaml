@@ -22,7 +22,8 @@ services:
     cap_add:
       - SYS_PTRACE
     volumes:
-      - /cores:/cores
+      # Note: For core dump collection, add "- /cores:/cores" and ensure
+      # /cores exists on the host (Linux only, not supported on macOS)
       - ${DATA_ROOT:-../../data}:/data
       - ${LOG_ROOT:-../../logs}/norsk-media:/var/log/norsk
       - ../../secrets:/data/secrets:ro
