@@ -1,7 +1,43 @@
 const { execSync } = require('child_process');
 
-const STUDIO_URL = process.env.STUDIO_URL || 'http://localhost:8000';
 const ROOT_DIR = process.cwd() + '/..';
+
+// Cache the URL once resolved
+let _studioUrl = null;
+
+function getStudioUrl() {
+  if (_studioUrl) return _studioUrl;
+
+  if (process.env.STUDIO_URL) {
+    _studioUrl = process.env.STUDIO_URL;
+    return _studioUrl;
+  }
+
+  // In CI, look up container IP since localhost might not work
+  if (process.env.CI) {
+    try {
+      const ip = execSync(
+        "docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' norsk-studio",
+        { encoding: 'utf8' }
+      ).trim();
+      if (ip) {
+        console.log(`Using container IP: ${ip}`);
+        _studioUrl = `http://${ip}:8000`;
+        return _studioUrl;
+      }
+    } catch (e) {
+      // Container might not be running yet, fall back to localhost
+    }
+  }
+
+  _studioUrl = 'http://localhost:8000';
+  return _studioUrl;
+}
+
+// Reset cached URL (call after stopping containers)
+function resetStudioUrl() {
+  _studioUrl = null;
+}
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -12,7 +48,7 @@ async function waitForHealthy(maxAttempts = 60) {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const res = await fetch(`${STUDIO_URL}/env`);
+      const res = await fetch(`${getStudioUrl()}/env`);
       if (res.ok) {
         console.log(`Studio healthy after ${attempt}s`);
         return;
@@ -40,7 +76,7 @@ async function waitForWorkflowRunning(maxAttempts = 60) {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const res = await fetch(`${STUDIO_URL}/live/api/components`);
+      const res = await fetch(`${getStudioUrl()}/live/api/components`);
       if (res.ok) {
         const data = await res.json();
         if (data.components && data.components.length > 0) {
@@ -67,6 +103,7 @@ async function startStudio(args = '') {
 async function stopStudio() {
   console.log('Stopping Studio...');
   execSync('./down.sh', { stdio: 'inherit', cwd: ROOT_DIR });
+  resetStudioUrl();
 }
 
 async function startSrtSource(name) {
@@ -90,13 +127,13 @@ async function stopSrtSource(name) {
 }
 
 async function getEnv() {
-  const res = await fetch(`${STUDIO_URL}/env`);
+  const res = await fetch(`${getStudioUrl()}/env`);
   if (!res.ok) throw new Error(`Failed to get /env: ${res.status}`);
   return res.json();
 }
 
 async function getLiveComponents() {
-  const res = await fetch(`${STUDIO_URL}/live/api/components`);
+  const res = await fetch(`${getStudioUrl()}/live/api/components`);
   if (!res.ok) {
     if (res.status === 503) {
       const err = await res.json();
@@ -109,7 +146,7 @@ async function getLiveComponents() {
 
 async function getComponentState(componentId, retries = 5) {
   for (let attempt = 0; attempt < retries; attempt++) {
-    const res = await fetch(`${STUDIO_URL}/live/api/${componentId}/state`);
+    const res = await fetch(`${getStudioUrl()}/live/api/${componentId}/state`);
     if (res.ok) {
       return res.json();
     }
@@ -152,7 +189,7 @@ async function waitForSrtConnection(componentId, streamId, maxAttempts = 30) {
 }
 
 module.exports = {
-  STUDIO_URL,
+  getStudioUrl,
   ROOT_DIR,
   sleep,
   waitForHealthy,

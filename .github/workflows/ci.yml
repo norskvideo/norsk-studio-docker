@@ -76,6 +76,18 @@ jobs:
           fi
         timeout-minutes: 10
 
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          echo "=== docker ps -a ==="
+          docker ps -a
+          echo ""
+          echo "=== norsk-media logs ==="
+          docker logs norsk-media 2>&1 | tail -100 || echo "No norsk-media container"
+          echo ""
+          echo "=== norsk-studio logs ==="
+          docker logs norsk-studio 2>&1 | tail -100 || echo "No norsk-studio container"
+
       - name: Upload integration test results
         if: always()
         uses: actions/upload-artifact@v4
