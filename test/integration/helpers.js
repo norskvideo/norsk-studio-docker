@@ -98,7 +98,21 @@ async function startStudio(args = '') {
   const networkMode = process.env.CI ? '--network-mode docker' : '';
   const cmd = `./up.sh ${networkMode} ${args}`.trim().replace(/\s+/g, ' ');
   console.log(`Starting: ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: ROOT_DIR });
+  try {
+    execSync(cmd, { stdio: 'inherit', cwd: ROOT_DIR });
+  } catch (e) {
+    // Dump container logs on startup failure
+    console.error('=== Startup failed, dumping container logs ===');
+    try {
+      console.error('--- norsk-media logs ---');
+      console.error(execSync('docker logs norsk-media 2>&1').toString());
+    } catch (_) { /* ignore */ }
+    try {
+      console.error('--- norsk-studio logs ---');
+      console.error(execSync('docker logs norsk-studio 2>&1').toString());
+    } catch (_) { /* ignore */ }
+    throw e;
+  }
   await waitForHealthy();
 }
 
