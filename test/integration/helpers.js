@@ -94,7 +94,9 @@ async function waitForWorkflowRunning(maxAttempts = 60) {
 }
 
 async function startStudio(args = '') {
-  const cmd = `./up.sh --host-ip 127.0.0.1 ${args}`;
+  // Force docker networking mode in CI - host mode doesn't work in GHA runners
+  const networkMode = process.env.CI ? '--network-mode docker' : '';
+  const cmd = `./up.sh --host-ip 127.0.0.1 ${networkMode} ${args}`;
   console.log(`Starting: ${cmd}`);
   execSync(cmd, { stdio: 'inherit', cwd: ROOT_DIR });
   await waitForHealthy();

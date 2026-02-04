@@ -76,8 +76,8 @@ jobs:
           fi
         timeout-minutes: 10
 
-      - name: Dump container logs on failure
-        if: failure()
+      - name: Dump container logs
+        if: always()
         run: |
           echo "=== docker ps -a ==="
           docker ps -a
