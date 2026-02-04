@@ -1,6 +1,8 @@
 const { execSync } = require('child_process');
+const path = require('path');
 
-const ROOT_DIR = process.cwd() + '/..';
+// __dirname is test/integration, so go up two levels to repo root
+const ROOT_DIR = path.resolve(__dirname, '../..');
 
 // Cache the URL once resolved
 let _studioUrl = null;
@@ -97,7 +99,7 @@ async function startStudio(args = '') {
   // Force docker networking mode in CI - host mode doesn't work in GHA runners
   const networkMode = process.env.CI ? '--network-mode docker' : '';
   const cmd = `./up.sh ${networkMode} ${args}`.trim().replace(/\s+/g, ' ');
-  console.log(`Starting: ${cmd}`);
+  console.log(`Starting: ${cmd} (in ${ROOT_DIR})`);
   try {
     execSync(cmd, { stdio: 'inherit', cwd: ROOT_DIR });
   } catch (e) {
