@@ -476,7 +476,8 @@ create_plugin() {
     docker run --rm \
         -v "$PWD/plugins:/plugins" \
         "$NORSK_STUDIO_IMAGE" \
-        npx studio-plugin create "/plugins/$name" || oops "failed to scaffold plugin"
+        sh -c "npx studio-plugin create '/plugins/$name' && chown -R $(id -u):$(id -g) '/plugins/$name'" \
+        || oops "failed to scaffold plugin"
 
     echo ""
     echo "Created plugins/$name"

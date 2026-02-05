@@ -27,7 +27,16 @@ describe('Plugin Workflow', function() {
 
   let originalConfig;
 
-  before(() => {
+  before(function() {
+    this.timeout(120000);
+    // Update to latest containers
+    console.log('Updating to latest containers...');
+    execSync('./manage.sh --use-containers studio=latest media=latest', {
+      cwd: ROOT_DIR,
+      encoding: 'utf8',
+      stdio: 'inherit',
+      timeout: 60000
+    });
     // Save original config
     originalConfig = fs.readFileSync(CONFIG_FILE, 'utf8');
   });
