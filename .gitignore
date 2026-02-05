@@ -11,3 +11,8 @@ integration-results.json
 integration-output.txt
 gh-summary.md
 discord.json
+
+# Plugin development artifacts
+plugins/*/
+!plugins/README.md
+.plugin-build.Dockerfile

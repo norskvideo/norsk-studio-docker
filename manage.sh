@@ -33,6 +33,7 @@ usage() {
     echo "  --enable-plugin <name>   Add plugin to library list"
     echo "  --disable-plugin <name>  Remove plugin from library list"
     echo "  --install-plugin <pkg>   Install npm package to plugins directory"
+    echo "  --create-plugin <name>   Scaffold a new plugin using SDK"
     echo "  --build-image [--tag TAG]  Build image with plugins installed"
     echo ""
     echo "  -h, --help         Show this help"
@@ -48,6 +49,7 @@ usage() {
     echo "  ./manage.sh --list-plugins"
     echo "  ./manage.sh --enable-plugin my-plugin"
     echo "  ./manage.sh --install-plugin @third-party/some-plugin"
+    echo "  ./manage.sh --create-plugin my-plugin"
     echo "  ./manage.sh --build-image --tag myregistry/norsk-studio:custom"
 }
 
@@ -453,6 +455,41 @@ install_npm_plugin() {
     enable_library "$pkg_name"
 }
 
+create_plugin() {
+    local name="$1"
+
+    if [[ -z "$name" ]]; then
+        oops "plugin name required"
+    fi
+
+    # Check if plugin already exists
+    if [[ -d "plugins/$name" ]]; then
+        oops "plugin already exists: plugins/$name"
+    fi
+
+    # Create plugins directory if needed
+    mkdir -p plugins
+
+    get_container_config .
+
+    echo "Scaffolding plugin '$name' using SDK..."
+    docker run --rm \
+        -v "$PWD/plugins:/plugins" \
+        "$NORSK_STUDIO_IMAGE" \
+        npx studio-plugin create "/plugins/$name" || oops "failed to scaffold plugin"
+
+    echo ""
+    echo "Created plugins/$name"
+    echo ""
+    echo "Next steps:"
+    echo "  cd plugins/$name"
+    echo "  npm install"
+    echo "  npm run build"
+    echo "  cd ../.."
+    echo "  ./manage.sh --enable-plugin $name"
+    echo "  ./up.sh"
+}
+
 build_plugin_image() {
     local tag="${1:-norsk-studio:with-plugins}"
     local dockerfile=".plugin-build.Dockerfile"
@@ -489,12 +526,13 @@ COPY plugins/ /usr/src/app/plugins/
 EOF
 
     # Add npm install for each plugin
+    # Use --legacy-peer-deps to handle nightly version peer dependency mismatches
     for dir in plugins/*/; do
         [[ -d "$dir" ]] || continue
         [[ -f "$dir/package.json" ]] || continue
         local dirname
         dirname=$(basename "$dir")
-        echo "RUN npm install ./plugins/$dirname" >> "$dockerfile"
+        echo "RUN npm install --legacy-peer-deps ./plugins/$dirname" >> "$dockerfile"
     done
 
     echo "Building image: $tag"
@@ -619,6 +657,15 @@ main() {
                 plugin_name="$1"
                 shift
                 ;;
+            --create-plugin)
+                action="create-plugin"
+                shift
+                if [[ $# -eq 0 || "$1" =~ ^- ]]; then
+                    oops "--create-plugin requires a plugin name"
+                fi
+                plugin_name="$1"
+                shift
+                ;;
             --build-image)
                 action="build-image"
                 shift
@@ -683,6 +730,9 @@ main() {
             ;;
         install-plugin)
             install_npm_plugin "$plugin_name"
+            ;;
+        create-plugin)
+            create_plugin "$plugin_name"
             ;;
         build-image)
             build_plugin_image "$image_tag"

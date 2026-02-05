@@ -144,4 +144,14 @@ output=$(./manage.sh --help)
 assert_contains "$output" "install-plugin" \
     "--help mentions --install-plugin"
 
+# Test 18: --create-plugin requires argument
+output=$(run_expect_fail ./manage.sh --create-plugin)
+assert_contains "$output" "requires a plugin name" \
+    "--create-plugin requires argument"
+
+# Test 19: --help mentions --create-plugin
+output=$(./manage.sh --help)
+assert_contains "$output" "create-plugin" \
+    "--help mentions --create-plugin"
+
 test_summary
