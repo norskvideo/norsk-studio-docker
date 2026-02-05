@@ -23,7 +23,7 @@ function getStudioImage() {
 }
 
 describe('Plugin Workflow', function() {
-  this.timeout(600000); // 10 minutes - plugin builds can be slow
+  this.timeout(1200000); // 20 minutes - container pulls and plugin builds can be slow in CI
 
   let originalConfig;
 

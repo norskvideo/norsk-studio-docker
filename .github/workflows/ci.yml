@@ -41,7 +41,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'run-integration')
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
           if [[ ! -s integration-results.json ]]; then
             echo '{"stats": {"passes": 0, "failures": 1}, "failures": [{"fullTitle": "Tests failed to run"}]}' > integration-results.json
           fi
-        timeout-minutes: 10
+        timeout-minutes: 25
 
       - name: Dump container logs
         if: always()
