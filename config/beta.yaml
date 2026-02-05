@@ -1,6 +1,0 @@
-server:
-  library:
-    - '@norskvideo/norsk-studio-built-ins'
-    - '@norskvideo/norsk-studio-source-switcher'
-    - '@norskvideo/norsk-studio-aws'
-    - '@norskvideo/norsk-studio-beta'

@@ -8,6 +8,15 @@ oops() {
     exit 1
 }
 
+# YAML manipulation via yq - uses local yq if available, falls back to docker
+yq_cmd() {
+    if command -v yq > /dev/null 2>&1; then
+        yq "$@"
+    else
+        docker run --rm -i -v "$PWD:/workdir" -w /workdir mikefarah/yq "$@"
+    fi
+}
+
 # Git wrapper - use docker if no host git (or USE_DOCKER_GIT=1 for testing)
 if [[ -z "$USE_DOCKER_GIT" ]] && command -v git > /dev/null 2>&1; then
     git_cmd() { git "$@"; }

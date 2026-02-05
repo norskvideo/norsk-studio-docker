@@ -13,8 +13,10 @@ services:
       - ${DATA_ROOT:-../../data}:/data
       - ../../config:/usr/src/app/config
       - ${LOG_ROOT:-../../logs}/norsk-studio:/usr/src/app/logs
+      - ../../plugins:/usr/src/app/plugins
+      - ../../scripts/link-plugins.sh:/usr/src/app/scripts/link-plugins.sh:ro
 
-    command: npx studio-editor
+    command: sh -c "/usr/src/app/scripts/link-plugins.sh && npx studio-editor"
     env_file:
       - ../../env/studio-env # Environment variables used by Norsk Studio
       - ../../env/components-env # Environment variables used by Norsk Studio's components

@@ -9,7 +9,7 @@ TAG_PATTERN='2.*'
 usage() {
     echo "Usage: ${0##*/} [options]"
     echo ""
-    echo "Manage Norsk Studio releases and container versions"
+    echo "Manage Norsk Studio releases, containers, and plugins"
     echo ""
     echo "Release options:"
     echo "  --current          Show current versions"
@@ -24,6 +24,17 @@ usage() {
     echo "  --factory-reset    Reset to last installed release"
     echo "                     (danger - discards all local changes, including new files)"
     echo ""
+    echo "Plugin options:"
+    echo "  --list-plugins     List enabled libraries and local plugins"
+    echo "  --enable-alpha     Enable alpha features"
+    echo "  --disable-alpha    Disable alpha features"
+    echo "  --enable-beta      Enable beta features"
+    echo "  --disable-beta     Disable beta features"
+    echo "  --enable-plugin <name>   Add plugin to library list"
+    echo "  --disable-plugin <name>  Remove plugin from library list"
+    echo "  --install-plugin <pkg>   Install npm package to plugins directory"
+    echo "  --build-image [--tag TAG]  Build image with plugins installed"
+    echo ""
     echo "  -h, --help         Show this help"
     echo ""
     echo "Examples:"
@@ -33,6 +44,11 @@ usage() {
     echo "  ./manage.sh --list-containers"
     echo "  ./manage.sh --use-containers media=1.0.403-xxx studio=1.27.1-xxx"
     echo "  ./manage.sh --pull"
+    echo "  ./manage.sh --enable-alpha"
+    echo "  ./manage.sh --list-plugins"
+    echo "  ./manage.sh --enable-plugin my-plugin"
+    echo "  ./manage.sh --install-plugin @third-party/some-plugin"
+    echo "  ./manage.sh --build-image --tag myregistry/norsk-studio:custom"
 }
 
 get_current_version() {
@@ -308,6 +324,196 @@ factory_reset() {
     echo "Reset complete."
 }
 
+# Plugin management functions
+CONFIG_FILE="config/default.yaml"
+
+get_enabled_libraries() {
+    yq_cmd '.server.library[]' "$CONFIG_FILE" 2>/dev/null
+}
+
+library_is_enabled() {
+    local name="$1"
+    get_enabled_libraries | grep -qxF "$name"
+}
+
+enable_library() {
+    local name="$1"
+    if library_is_enabled "$name"; then
+        echo "Already enabled: $name"
+        return 0
+    fi
+    yq_cmd -i '.server.library += ["'"$name"'"]' "$CONFIG_FILE"
+    echo "Enabled: $name"
+}
+
+disable_library() {
+    local name="$1"
+    if ! library_is_enabled "$name"; then
+        echo "Not enabled: $name"
+        return 0
+    fi
+    yq_cmd -i 'del(.server.library[] | select(. == "'"$name"'"))' "$CONFIG_FILE"
+    echo "Disabled: $name"
+}
+
+list_plugins() {
+    echo "Enabled libraries (in config/default.yaml):"
+    get_enabled_libraries | while read -r lib; do
+        echo "  $lib"
+    done
+
+    echo ""
+    echo "Local plugins (in ./plugins/):"
+    local found_plugins=false
+    if [[ -d plugins ]]; then
+        for dir in plugins/*/; do
+            [[ -d "$dir" ]] || continue
+            [[ -f "$dir/package.json" ]] || continue
+            found_plugins=true
+            local name
+            name=$(node -p "require('./$dir/package.json').name" 2>/dev/null) || continue
+            if library_is_enabled "$name"; then
+                echo "  $name (enabled)"
+            else
+                echo "  $name (not in library list)"
+            fi
+        done
+    fi
+    if [[ "$found_plugins" == "false" ]]; then
+        echo "  (none)"
+    fi
+}
+
+install_npm_plugin() {
+    local package="$1"
+
+    if [[ -z "$package" ]]; then
+        oops "package name required"
+    fi
+
+    # Create plugins directory if needed
+    mkdir -p plugins
+
+    echo "Fetching $package from npm..."
+
+    # Create temp directory for download
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap "rm -rf '$tmpdir'" EXIT
+
+    # Use npm pack to download the tarball
+    (cd "$tmpdir" && npm pack "$package" --quiet) || oops "failed to fetch $package"
+
+    # Find the tarball (npm pack outputs packagename-version.tgz)
+    local tarball
+    tarball=$(ls "$tmpdir"/*.tgz 2>/dev/null | head -1)
+    if [[ -z "$tarball" ]]; then
+        oops "no tarball found after npm pack"
+    fi
+
+    # Extract to get the package name from package.json
+    tar -xzf "$tarball" -C "$tmpdir"
+
+    local pkg_name
+    pkg_name=$(node -p "require('$tmpdir/package/package.json').name" 2>/dev/null)
+    if [[ -z "$pkg_name" ]]; then
+        oops "could not read package name"
+    fi
+
+    # Determine target directory
+    # Handle scoped packages: @scope/name -> plugins/@scope/name
+    local target_dir="plugins/$pkg_name"
+    if [[ "$pkg_name" == @*/* ]]; then
+        local scope="${pkg_name%/*}"
+        mkdir -p "plugins/$scope"
+    fi
+
+    # Check if already installed
+    if [[ -d "$target_dir" ]]; then
+        echo "Plugin already exists at $target_dir"
+        read -p "Overwrite? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            rm -rf "$target_dir"
+        else
+            exit 1
+        fi
+    fi
+
+    # Move package to plugins directory
+    mv "$tmpdir/package" "$target_dir"
+
+    # Install dependencies
+    echo "Installing dependencies..."
+    (cd "$target_dir" && npm install --production --quiet) || oops "failed to install dependencies"
+
+    echo "Installed to $target_dir"
+
+    # Enable in config
+    enable_library "$pkg_name"
+}
+
+build_plugin_image() {
+    local tag="${1:-norsk-studio:with-plugins}"
+    local dockerfile=".plugin-build.Dockerfile"
+
+    # Check for local plugins
+    local has_plugins=false
+    if [[ -d plugins ]]; then
+        for dir in plugins/*/; do
+            [[ -d "$dir" ]] || continue
+            [[ -f "$dir/package.json" ]] || continue
+            has_plugins=true
+            break
+        done
+    fi
+
+    if [[ "$has_plugins" == "false" ]]; then
+        echo "No local plugins found in ./plugins/"
+        echo "The built image would be identical to the base image."
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo
+        [[ $REPLY =~ ^[Yy]$ ]] || exit 1
+    fi
+
+    get_container_config .
+
+    # Generate Dockerfile
+    cat > "$dockerfile" << EOF
+FROM $NORSK_STUDIO_IMAGE
+
+# Copy local plugins
+COPY plugins/ /usr/src/app/plugins/
+
+# Install each plugin
+EOF
+
+    # Add npm install for each plugin
+    for dir in plugins/*/; do
+        [[ -d "$dir" ]] || continue
+        [[ -f "$dir/package.json" ]] || continue
+        local dirname
+        dirname=$(basename "$dir")
+        echo "RUN npm install ./plugins/$dirname" >> "$dockerfile"
+    done
+
+    echo "Building image: $tag"
+    echo ""
+    docker build -f "$dockerfile" -t "$tag" .
+    local build_status=$?
+
+    # Cleanup
+    rm -f "$dockerfile"
+
+    if [[ $build_status -eq 0 ]]; then
+        echo ""
+        echo "Built: $tag"
+        echo "Push with: docker push $tag"
+    else
+        oops "build failed"
+    fi
+}
+
 main() {
     if [[ ! -d .git ]]; then
         oops "not a git repository"
@@ -321,6 +527,8 @@ main() {
     local action=""
     local version=""
     local -a container_args=()
+    local plugin_name=""
+    local image_tag=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -364,6 +572,64 @@ main() {
                 action="factory-reset"
                 shift
                 ;;
+            --list-plugins)
+                action="list-plugins"
+                shift
+                ;;
+            --enable-alpha)
+                action="enable-alpha"
+                shift
+                ;;
+            --disable-alpha)
+                action="disable-alpha"
+                shift
+                ;;
+            --enable-beta)
+                action="enable-beta"
+                shift
+                ;;
+            --disable-beta)
+                action="disable-beta"
+                shift
+                ;;
+            --enable-plugin)
+                action="enable-plugin"
+                shift
+                if [[ $# -eq 0 || "$1" =~ ^- ]]; then
+                    oops "--enable-plugin requires a plugin name"
+                fi
+                plugin_name="$1"
+                shift
+                ;;
+            --disable-plugin)
+                action="disable-plugin"
+                shift
+                if [[ $# -eq 0 || "$1" =~ ^- ]]; then
+                    oops "--disable-plugin requires a plugin name"
+                fi
+                plugin_name="$1"
+                shift
+                ;;
+            --install-plugin)
+                action="install-plugin"
+                shift
+                if [[ $# -eq 0 || "$1" =~ ^- ]]; then
+                    oops "--install-plugin requires a package name"
+                fi
+                plugin_name="$1"
+                shift
+                ;;
+            --build-image)
+                action="build-image"
+                shift
+                ;;
+            --tag)
+                if [[ $# -lt 2 ]]; then
+                    oops "--tag requires a value"
+                fi
+                image_tag="$2"
+                shift 2
+                ;;
             *)
                 oops "unknown option: $1"
                 ;;
@@ -393,6 +659,33 @@ main() {
             ;;
         factory-reset)
             factory_reset
+            ;;
+        list-plugins)
+            list_plugins
+            ;;
+        enable-alpha)
+            enable_library "@norskvideo/norsk-studio-alpha"
+            ;;
+        disable-alpha)
+            disable_library "@norskvideo/norsk-studio-alpha"
+            ;;
+        enable-beta)
+            enable_library "@norskvideo/norsk-studio-beta"
+            ;;
+        disable-beta)
+            disable_library "@norskvideo/norsk-studio-beta"
+            ;;
+        enable-plugin)
+            enable_library "$plugin_name"
+            ;;
+        disable-plugin)
+            disable_library "$plugin_name"
+            ;;
+        install-plugin)
+            install_npm_plugin "$plugin_name"
+            ;;
+        build-image)
+            build_plugin_image "$image_tag"
             ;;
         *)
             usage

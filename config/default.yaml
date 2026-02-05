@@ -22,7 +22,6 @@ server:
   #     name: "s3"
   #     bucket: "cf-norsk-manager-config"
   #     prefix: "studio-packages"
-
 #################################################################
 # Setting for how Norsk Studio talks to Norsk Media Server
 #################################################################
