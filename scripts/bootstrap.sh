@@ -10,7 +10,7 @@ HARDWARE="auto"
 PLATFORM=""
 INSTALL_DIR="/opt/norsk-studio"
 REPO_URL="https://github.com/norskvideo/norsk-studio-docker.git"
-REPO_BRANCH="git-mgt"
+REPO_BRANCH="main"
 DOWNLOAD_MEDIA="true"
 NORSK_LICENSE=""
 STUDIO_PASSWORD=""
@@ -27,7 +27,7 @@ OPTIONS:
   --hardware=TYPE       Hardware profile: auto|none|quadra|nvidia (default: auto)
   --platform=NAME       Platform: linode|google|oracle|local (auto-detected if omitted)
   --install-dir=PATH    Install directory (default: /opt/norsk-studio)
-  --repo-branch=BRANCH  Git branch to clone (default: git-mgt)
+  --repo-branch=BRANCH  Git branch to clone (default: main)
   --download-media=BOOL Download example media files (default: true)
   --license=JSON        Norsk license JSON string (required)
   --password=PASS       Studio admin password (required)
