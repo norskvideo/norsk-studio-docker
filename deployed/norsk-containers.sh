@@ -5,6 +5,15 @@ set -eo pipefail
 # Sources cloud config and calls up.sh with appropriate flags
 
 source "$(dirname "$0")/norsk-config.sh"
+
+SETUP_SCRIPT="$(dirname "$0")/$DEPLOY_PLATFORM/norsk-setup.sh"
+if [[ -f "$SETUP_SCRIPT" ]]; then
+  source "$SETUP_SCRIPT"
+  if declare -f setup > /dev/null; then
+    setup
+  fi
+fi
+
 cd "$(dirname "$0")/.." || exit 1
 
 # # Calculate ICE servers with STUN fallback for cloud deployment
