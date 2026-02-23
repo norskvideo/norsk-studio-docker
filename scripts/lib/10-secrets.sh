@@ -3,13 +3,15 @@
 # Secrets setup: License and admin password
 # Sourced by bootstrap.sh
 
-setup_secrets() {
+setup_license() {
   echo "Writing license file..."
   mkdir -p "$REPO_DIR/secrets"
   (set +x; printf '%s\n' "$NORSK_LICENSE") > "$REPO_DIR/secrets/license.json"
   chown norsk:norsk "$REPO_DIR/secrets/license.json"
   chmod 600 "$REPO_DIR/secrets/license.json"
+}
 
+setup_password() {
   echo "Generating password hash..."
   local htp_dir="$REPO_DIR/support/oauth2/secrets"
   local htpasswd_file="$htp_dir/.htpasswd"
@@ -19,4 +21,9 @@ setup_secrets() {
     > "$htpasswd_file"
   chown norsk:norsk "$htpasswd_file"
   chmod 644 "$htpasswd_file"
+}
+
+setup_secrets() {
+  setup_license
+  setup_password
 }
