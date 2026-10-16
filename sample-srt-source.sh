@@ -10,11 +10,7 @@ oops() {
     exit 1
 }
 
-if command -v curl > /dev/null 2>&1; then
-    fetch() { curl  --silent --fail -L "$1" -o "$2"; }
-    elif command -v wget > /dev/null 2>&1; then
-    fetch() { wget --quiet "$1" -O "$2"; }
-else
+if ! command -v curl > /dev/null 2>&1 && ! command -v wget > /dev/null 2>&1; then
     oops "you don't have wget or curl installed, which I need to download the file"
 fi
 
@@ -24,15 +20,10 @@ usage() {
     echo "  Start a sample SRT source that sends a stream to camera 1 or camera 2 on port 5001"
 }
 
+source ./scripts/media-assets.sh
+
 function downloadMediaAsset() {
-    mkdir -p $SOURCES_DIR
-    local -r fileName=$1
-    local -r target="$SOURCES_DIR/$fileName"
-    if [[ ! -f $target ]]; then
-        echo "Downloading sample file $target"
-        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$fileName" "$target.download"
-        mv "$target.download" "$target"
-    fi
+    fetch_media_asset "$1" "$SOURCES_DIR"
 }
 
 main() {
