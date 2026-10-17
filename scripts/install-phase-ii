@@ -13,8 +13,7 @@ usage() {
     exit 1
 }
 
-# The top level installer has already checked that curl or wget is available,
-# which fetch_media_asset uses.
+# fetch_media_asset downloads with curl, or wget where curl is missing.
 source "$(dirname "$0")/media-assets.sh"
 
 pull() {

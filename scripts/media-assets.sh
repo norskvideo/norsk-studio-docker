@@ -27,9 +27,9 @@ fetch_media_asset() {
     mkdir -p "$dir"
     echo "Downloading $name"
     if command -v curl > /dev/null 2>&1; then
-        curl --fail --silent --show-error -L --retry 3 -o "$tmp" "$url" || { rm -f "$tmp"; return 1; }
+        curl --fail --silent --show-error -L --retry 3 -o "$tmp" "$url" || { echo "Failed to download $url" >&2; rm -f "$tmp"; return 1; }
     else
-        wget --quiet --tries=3 -O "$tmp" "$url" || { rm -f "$tmp"; return 1; }
+        wget --quiet --tries=3 -O "$tmp" "$url" || { echo "Failed to download $url" >&2; rm -f "$tmp"; return 1; }
     fi
     if [[ ! -s "$tmp" ]]; then
         echo "$url came back empty" >&2
@@ -37,4 +37,5 @@ fetch_media_asset() {
         return 1
     fi
     mv -f "$tmp" "$target"
+    echo "Downloaded: $target"
 }
