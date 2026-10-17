@@ -77,9 +77,8 @@ EOF
     local media_dir="$REPO_DIR/data/media"
     mkdir -p "$media_dir"
     for source in action.mp4 wildlife.ts; do
-      if fetch_media_asset "$source" "$media_dir"; then
-        echo "Downloaded: $source"
-      else
+      # fetch_media_asset says whether it downloaded or found the file.
+      if ! fetch_media_asset "$source" "$media_dir"; then
         echo "Warning: Failed to download $source (continuing anyway)"
       fi
     done
