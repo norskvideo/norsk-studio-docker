@@ -100,6 +100,13 @@ jobs:
             test/integration-results.json
             test/integration-output.txt
 
+  # Discord, in the id3as house style (id3as/ci-workflows: README "The house style" and
+  # actions/discord-notify): "Jankings", a happy pony on success and a sad one otherwise
+  # (theponyapi thumbSmall, fixed fallback), green 5763719 / red 15548997 / amber 15844367,
+  # ✅/❌/⚠️, and the "[repo/ref](run)" / "[Run #id](run)" header. It is built inline here because
+  # this repo is in the norskvideo org and cannot use ci-workflows' private discord-notify action
+  # (its access setting covers id3as-owned repos only). Keep it in step with that action.
+  # Posts on pushes to main only; pull requests get the job summary.
   notify:
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
@@ -119,14 +126,31 @@ jobs:
           path: results
         continue-on-error: true
 
+      # A job that ran but left no results failed before reporting: say so, never "skipped" or green.
+      # A cancelled job is reported as cancelled (amber), never as a failure.
       - name: Create default results if missing
+        env:
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          INT_RESULT: ${{ needs.integration-tests.result }}
         run: |
           mkdir -p results
+          died() {
+            if [[ "$2" == "cancelled" ]]; then
+              echo '{"stats": {"passes": 0, "failures": 0, "cancelled": true}, "failures": []}'
+            else
+              jq -n --arg why "$1 job $2 before reporting results" \
+                '{stats: {passes: 0, failures: 1}, failures: [{fullTitle: $why}]}'
+            fi
+          }
           if [[ ! -f results/unit-results.json ]]; then
-            echo '{"stats": {"passes": 0, "failures": 0}, "failures": []}' > results/unit-results.json
+            died unit-tests "$UNIT_RESULT" > results/unit-results.json
           fi
           if [[ ! -f results/integration-results.json ]]; then
-            echo '{"stats": {"passes": 0, "failures": 0, "skipped": true}, "failures": []}' > results/integration-results.json
+            if [[ "$INT_RESULT" == "skipped" ]]; then
+              echo '{"stats": {"passes": 0, "failures": 0, "skipped": true}, "failures": []}' > results/integration-results.json
+            else
+              died integration-tests "$INT_RESULT" > results/integration-results.json
+            fi
           fi
 
       - name: Gather commits
@@ -144,26 +168,45 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
-      - name: Get pony avatar
-        id: pony
+      # success: no failures; failure: any failure; warn: integration skipped; cancelled: a job was
+      # cancelled (amber, never red or green).
+      - name: Status
+        id: status
+        env:
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          INT_RESULT: ${{ needs.integration-tests.result }}
         run: |
-          # Check if any tests failed
           UNIT_FAILURES=$(jq -r '.stats.failures // 0' results/unit-results.json)
           INT_FAILURES=$(jq -r '.stats.failures // 0' results/integration-results.json)
-          if [[ "$UNIT_FAILURES" -gt 0 || "$INT_FAILURES" -gt 0 ]]; then
-            QUERY="sad"
+          INT_SKIPPED=$(jq -r '.stats.skipped // false' results/integration-results.json)
+          if [[ "$UNIT_RESULT" == "cancelled" || "$INT_RESULT" == "cancelled" ]]; then
+            STATUS=cancelled
+          elif [[ "$UNIT_FAILURES" -gt 0 || ( "$INT_SKIPPED" != "true" && "$INT_FAILURES" -gt 0 ) ]]; then
+            STATUS=failure
+          elif [[ "$INT_SKIPPED" == "true" ]]; then
+            STATUS=warn
           else
-            QUERY="happy"
+            STATUS=success
           fi
-          PONY_URL=$(curl -s "https://theponyapi.com/api/v1/pony/random?q=$QUERY" | jq -r '.pony.representations.small // empty')
-          if [[ -z "$PONY_URL" ]]; then
-            PONY_URL="https://theponyapi.com/images/fallback.png"
-          fi
-          echo "url=$PONY_URL" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Get pony avatar
+        id: pony
+        env:
+          STATUS: ${{ steps.status.outputs.status }}
+        run: |
+          FALLBACK="https://pones.theponyapi.com/file/ponies/5201928829009920/thumb_small"
+          if [[ "$STATUS" == "success" ]]; then QUERY="happy"; else QUERY="sad"; fi
+          PONY_URL=$(curl -sSf -m 10 -H 'Accept: application/json' \
+            "https://theponyapi.com/api/v1/pony/random?q=$QUERY" 2>/dev/null \
+            | jq -r '.pony.representations.thumbSmall // empty' 2>/dev/null || true)
+          echo "url=${PONY_URL:-$FALLBACK}" >> "$GITHUB_OUTPUT"
 
       - name: Generate summaries
         env:
           COMMITS: ${{ steps.commits.outputs.commits }}
+          STATUS: ${{ steps.status.outputs.status }}
+          PONY_URL: ${{ steps.pony.outputs.url }}
         run: |
           cd results
           # Generate Discord payload
@@ -171,43 +214,41 @@ jobs:
             --arg GITHUB_REF "${GITHUB_REF:-local}" \
             --arg GITHUB_RUN_ID "${GITHUB_RUN_ID:-0}" \
             --arg GITHUB_REPOSITORY "${GITHUB_REPOSITORY:-norskvideo/norsk-studio-docker}" \
-            --arg PONY_URL "${{ steps.pony.outputs.url }}" \
+            --arg GITHUB_SERVER_URL "${GITHUB_SERVER_URL:-https://github.com}" \
+            --arg STATUS "$STATUS" \
+            --arg PONY_URL "$PONY_URL" \
             --arg COMMITS "$COMMITS" \
-          '{
+          '
+          def green: 5763719; def red: 15548997; def amber: 15844367;
+          def cap: if length > 4000 then .[0:4000] + "\n… (cut; see the run)" else . end;
+          def failed($r): if ($r.failures | length) > 0
+              then "\n**Failed:**\n- " + ([$r.failures[].fullTitle] | join("\n- ")) else "" end;
+          def suite($name; $r):
+              if $r.stats.cancelled then {color: amber, description: ("**" + $name + ":** cancelled")}
+              elif $r.stats.skipped then {color: amber, description: ("**" + $name + ":** skipped")}
+              else {color: (if $r.stats.failures == 0 then green else red end),
+                    description: ("**" + $name + ":** " + ($r.stats.passes | tostring) + " passed"
+                      + (if $r.stats.failures > 0 then ", " + ($r.stats.failures | tostring) + " failed" + failed($r) else "" end))}
+              end;
+          ($GITHUB_SERVER_URL + "/" + $GITHUB_REPOSITORY + "/actions/runs/" + $GITHUB_RUN_ID) as $run
+          | ($GITHUB_REPOSITORY | split("/") | last) as $repo
+          | {success: {emoji: "✅", color: green}, failure: {emoji: "❌", color: red},
+             warn: {emoji: "⚠️", color: amber}, cancelled: {emoji: "⚠️", color: amber}}[$STATUS] as $s
+          |
+          {
             "content": "",
             "avatar_url": $PONY_URL,
             "username": "Jankings",
             "embeds": ([
-              {
-                "title": "",
-                "color": (if .[0].stats.failures == 0 then 5763719 else 15548997 end),
-                "description": (
-                  "[norsk-studio-docker/" + $GITHUB_REF + "](https://github.com/" + $GITHUB_REPOSITORY + "/actions/runs/" + $GITHUB_RUN_ID + ")"
-                  + "\r\n"
-                  + "**Unit Tests:** "
-                  + (.[0].stats.passes | tostring) + " passed"
-                  + (if .[0].stats.failures > 0 then ", " + (.[0].stats.failures | tostring) + " failed" else "" end)
-                )
-              },
-              {
-                "title": "",
-                "color": (if .[1].stats.skipped then 9807270 elif .[1].stats.failures == 0 then 5763719 else 15548997 end),
-                "description": (
-                  if .[1].stats.skipped then "**Integration Tests:** skipped"
-                  else
-                    "**Integration Tests:** "
-                    + (.[1].stats.passes | tostring) + " passed"
-                    + (if .[1].stats.failures > 0 then
-                        ", " + (.[1].stats.failures | tostring) + " failed"
-                        + "\r\n**Failed:** \r\n- " + ([.[1].failures[].fullTitle] | join("\r\n- "))
-                      else "" end)
-                  end
-                )
-              }
+              (suite("Unit Tests"; .[0]) | .description = ((
+                "[" + $repo + "/" + $GITHUB_REF + "](" + $run + ")\n"
+                + "[Run #" + $GITHUB_RUN_ID + "](" + $run + ")\n\n"
+                + "**" + $repo + "** " + $s.emoji + "\n"
+                + .description) | cap)),
+              (suite("Integration Tests"; .[1]) | .description |= cap)
             ] + (if $COMMITS != "" then [{
-              "title": "",
-              "color": 5763719,
-              "description": ("**Changes:**\r\n" + $COMMITS)
+              "color": $s.color,
+              "description": (("**Changes:**\n" + $COMMITS) | cap)
             }] else [] end))
           }' > discord.json
 
@@ -237,12 +278,16 @@ jobs:
           else "" end)' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Discord notification
+        if: github.event_name != 'pull_request'
         continue-on-error: true
+        env:
+          DISCORD_URL: ${{ secrets.DISCORD_URL }}
         run: |
-          if [[ -f results/discord.json && -n "${{ secrets.DISCORD_URL }}" ]]; then
-            curl -H "Content-Type: application/json" \
+          if [[ -f results/discord.json && -n "$DISCORD_URL" ]]; then
+            curl -sS --fail-with-body --retry 3 --retry-connrefused --retry-delay 2 \
+              -H "Content-Type: application/json" \
               -d @results/discord.json \
-              "${{ secrets.DISCORD_URL }}"
+              "$DISCORD_URL"
           else
             echo "Skipping Discord notification (no webhook or results file)"
           fi
