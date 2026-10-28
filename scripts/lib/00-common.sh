@@ -3,6 +3,8 @@
 # Common setup: Docker, user, dependencies, repo clone
 # Sourced by bootstrap.sh
 
+source "$(dirname "${BASH_SOURCE[0]}")/../media-assets.sh"
+
 setup_common() {
   echo "Installing Docker..."
   curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
@@ -75,9 +77,8 @@ EOF
     local media_dir="$REPO_DIR/data/media"
     mkdir -p "$media_dir"
     for source in action.mp4 wildlife.ts; do
-      if curl --fail -L "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" -o "$media_dir/$source"; then
-        echo "Downloaded: $source"
-      else
+      # fetch_media_asset says whether it downloaded or found the file.
+      if ! fetch_media_asset "$source" "$media_dir"; then
         echo "Warning: Failed to download $source (continuing anyway)"
       fi
     done

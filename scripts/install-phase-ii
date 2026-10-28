@@ -13,12 +13,8 @@ usage() {
     exit 1
 }
 
-# The top level installer has already checked that one of these is available...
-if command -v curl > /dev/null 2>&1; then
-    fetch() { curl  --silent --fail -L "$1" -o "$2"; }
-else
-    fetch() { wget --quiet "$1" -O "$2"; }
-fi
+# fetch_media_asset downloads with curl, or wget where curl is missing.
+source "$(dirname "$0")/media-assets.sh"
 
 pull() {
     DOCKER_CLI_HINTS=false docker pull $1
@@ -61,7 +57,7 @@ main() {
     sourcesDir="$targetDirname/data/media"
     mkdir -p "$sourcesDir"
     for source in action.mp4 wildlife.ts ; do
-        fetch "https://s3.eu-west-1.amazonaws.com/norsk.video/media-examples/data/$source" "$sourcesDir/$source"
+        fetch_media_asset "$source" "$sourcesDir"
     done
 
     echo
